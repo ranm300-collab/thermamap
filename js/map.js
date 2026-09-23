@@ -14,10 +14,25 @@ const MAP_STYLE = [
   { featureType: 'transit', stylers: [{ visibility: 'off' }] }
 ];
 
+// was getting "no imagery here" patches when zooming in too far or drifting off the city
+const METRO_BOUNDS = {
+  north: 35.30,
+  south: 34.90,
+  east: -106.45,
+  west: -106.85
+};
+
 function initMap() {
   new google.maps.Map(document.getElementById('map'), {
     center: ABQ_CENTER,
     zoom: 13,
+    minZoom: 10,
+    maxZoom: 19,
+    restriction: {
+      latLngBounds: METRO_BOUNDS,
+      strictBounds: false
+    },
+    backgroundColor: '#e8e0d0',
     styles: MAP_STYLE,
     mapTypeControl: false,
     streetViewControl: false
