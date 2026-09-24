@@ -30,7 +30,8 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: ABQ_CENTER,
     zoom: 13,
-    minZoom: 10,
+    // 10 was too far out, city label drops off right at that zoom
+    minZoom: 11,
     maxZoom: 19,
     restriction: {
       latLngBounds: METRO_BOUNDS,
