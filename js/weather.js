@@ -38,5 +38,79 @@ function loadWeather() {
     })
 }
 
+const ALERT_URL = 'https://api.weather.gov/alerts/active?point=35.0844,-106.6504'
+const ALERT_RANK = ['Extreme Heat Warning', 'Extreme Heat Watch', 'Heat Advisory']
+
+// ?fakealert=1 to see the banner, no real heat alerts in sept lol
+const FAKE_ALERT = {
+  event: 'Heat Advisory',
+  ends: '2026-09-23T20:00:00-06:00',
+  instruction: 'Drink plenty of fluids and take breaks in shade or ac during the hottest part of the day.'
+}
+
+function formatAlertEnd(iso) {
+  const d = new Date(iso)
+  let h = d.getHours()
+  const ampm = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  return `${h} ${ampm}`
+}
+
+function pickWorstAlert(features) {
+  let best = null
+  features.forEach(f => {
+    const rank = ALERT_RANK.indexOf(f.properties.event)
+    if (rank === -1) return
+    if (!best || rank < ALERT_RANK.indexOf(best.event)) best = f.properties
+  })
+  return best
+}
+
+function showAlert(alert) {
+  const banner = document.getElementById('alert-banner')
+  document.getElementById('alert-headline').textContent = `${alert.event} until ${formatAlertEnd(alert.ends)}`
+  document.getElementById('alert-instruction').textContent = alert.instruction
+  banner.classList.remove('severe', 'caution', 'expanded')
+  banner.classList.add(alert.event === 'Extreme Heat Warning' ? 'severe' : 'caution')
+  banner.hidden = false
+  google.maps.event.trigger(map, 'resize')
+  map.setCenter(ABQ_CENTER)
+}
+
+function hideAlert() {
+  const banner = document.getElementById('alert-banner')
+  if (banner.hidden) return
+  banner.hidden = true
+  google.maps.event.trigger(map, 'resize')
+  map.setCenter(ABQ_CENTER)
+}
+
+function loadAlerts() {
+  if (new URLSearchParams(location.search).get('fakealert') === '1') {
+    showAlert(FAKE_ALERT)
+    return
+  }
+
+  fetch(ALERT_URL)
+    .then(res => {
+      if (!res.ok) throw new Error('alerts bad status')
+      return res.json()
+    })
+    .then(data => {
+      const worst = pickWorstAlert(data.features)
+      if (worst) showAlert(worst)
+      else hideAlert()
+    })
+    .catch(err => console.error('alerts fetch failed', err))
+}
+
+document.getElementById('alert-banner').addEventListener('click', () => {
+  document.getElementById('alert-banner').classList.toggle('expanded')
+})
+
 loadWeather()
-setInterval(loadWeather, 10 * 60 * 1000)
+loadAlerts()
+setInterval(() => {
+  loadWeather()
+  loadAlerts()
+}, 10 * 60 * 1000)

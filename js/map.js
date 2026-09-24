@@ -22,8 +22,10 @@ const METRO_BOUNDS = {
   west: -106.85
 };
 
+let map
+
 function initMap() {
-  new google.maps.Map(document.getElementById('map'), {
+  map = new google.maps.Map(document.getElementById('map'), {
     center: ABQ_CENTER,
     zoom: 13,
     minZoom: 10,

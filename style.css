@@ -58,3 +58,31 @@ body {
 #map {
   flex: 1;
 }
+
+#alert-banner {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#alert-banner.severe {
+  background: #6b2b1f;
+  color: #fdf6ee;
+}
+
+#alert-banner.caution {
+  background: #d99036;
+  color: #2b2620;
+}
+
+#alert-instruction {
+  display: none;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+#alert-banner.expanded #alert-instruction {
+  display: block;
+}
