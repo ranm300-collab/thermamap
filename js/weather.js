@@ -1,116 +1,113 @@
-const WX_COORDS = { lat: 35.0844, lng: -106.6504 }
+const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
 
 function loadFromNWS() {
   // google api down, fall back to nws
   fetch('https://api.weather.gov/stations/KABQ/observations/latest')
     .then(res => {
-      if (!res.ok) throw new Error('nws bad status')
-      return res.json()
+      if (!res.ok) throw new Error('nws bad status');
+      return res.json();
     })
     .then(data => {
-      const c = data.properties.temperature.value
-      if (c === null) throw new Error('nws temp null')
-      const f = c * 9 / 5 + 32
-      document.getElementById('temp-now').textContent = Math.round(f) + '°F'
-      document.getElementById('temp-detail').textContent = ''
+      const c = data.properties.temperature.value;
+      if (c === null) throw new Error('nws temp null');
+      const f = c * 9 / 5 + 32;
+      document.getElementById('temp-now').textContent = Math.round(f) + '°F';
+      document.getElementById('temp-detail').textContent = '';
     })
-    .catch(err => console.error('nws fallback failed', err))
+    .catch(err => console.error('nws fallback failed', err));
 }
 
 function loadWeather() {
-  const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${GOOGLE_MAPS_KEY}&location.latitude=${WX_COORDS.lat}&location.longitude=${WX_COORDS.lng}&unitsSystem=IMPERIAL`
+  const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${GOOGLE_MAPS_KEY}&location.latitude=${WX_COORDS.lat}&location.longitude=${WX_COORDS.lng}&unitsSystem=IMPERIAL`;
 
   fetch(url)
     .then(res => {
-      if (!res.ok) throw new Error('bad status')
-      return res.json()
+      if (!res.ok) throw new Error('bad status');
+      return res.json();
     })
     .then(data => {
-      const f = data.temperature.degrees
-      const feels = data.feelsLikeTemperature.degrees
-      const uv = data.uvIndex
-      document.getElementById('temp-now').textContent = Math.round(f) + '°F'
-      document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`
+      const f = data.temperature.degrees;
+      const feels = data.feelsLikeTemperature.degrees;
+      const uv = data.uvIndex;
+      document.getElementById('temp-now').textContent = Math.round(f) + '°F';
+      document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
     })
     .catch(err => {
-      console.error('google wx failed', err)
-      loadFromNWS()
-    })
+      console.error('google wx failed', err);
+      loadFromNWS();
+    });
 }
 
-const ALERT_URL = 'https://api.weather.gov/alerts/active?point=35.0844,-106.6504'
+const ALERT_URL = 'https://api.weather.gov/alerts/active?point=35.0844,-106.6504';
 const ALERT_RANK = ['Extreme Heat Warning', 'Extreme Heat Watch', 'Heat Advisory']
-
 // ?fakealert=1 to see the banner, no real heat alerts in sept lol
 const FAKE_ALERT = {
   event: 'Heat Advisory',
   ends: '2026-09-23T20:00:00-06:00',
   instruction: 'Drink plenty of fluids and take breaks in shade or ac during the hottest part of the day.'
-}
+};
 
 function formatAlertEnd(iso) {
-  const d = new Date(iso)
-  let h = d.getHours()
-  const ampm = h >= 12 ? 'pm' : 'am'
-  h = h % 12 || 12
-  return `${h} ${ampm}`
+  const d = new Date(iso);
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h} ${ampm}`;
 }
-
 function pickWorstAlert(features) {
-  let best = null
+  let best = null;
   features.forEach(f => {
-    const rank = ALERT_RANK.indexOf(f.properties.event)
-    if (rank === -1) return
-    if (!best || rank < ALERT_RANK.indexOf(best.event)) best = f.properties
-  })
-  return best
+    const rank = ALERT_RANK.indexOf(f.properties.event);
+    if (rank === -1) return;
+    if (!best || rank < ALERT_RANK.indexOf(best.event)) best = f.properties;
+  });
+  return best;
 }
 
 function showAlert(alert) {
-  const banner = document.getElementById('alert-banner')
-  document.getElementById('alert-headline').textContent = `${alert.event} until ${formatAlertEnd(alert.ends)}`
-  document.getElementById('alert-instruction').textContent = alert.instruction
-  banner.classList.remove('severe', 'caution', 'expanded')
-  banner.classList.add(alert.event === 'Extreme Heat Warning' ? 'severe' : 'caution')
-  banner.hidden = false
-  google.maps.event.trigger(map, 'resize')
-  map.setCenter(ABQ_CENTER)
+  const banner = document.getElementById('alert-banner');
+  document.getElementById('alert-headline').textContent = `${alert.event} until ${formatAlertEnd(alert.ends)}`;
+  document.getElementById('alert-instruction').textContent = alert.instruction;
+  banner.classList.remove('severe', 'caution', 'expanded');
+  banner.classList.add(alert.event === 'Extreme Heat Warning' ? 'severe' : 'caution');
+  banner.hidden = false;
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter(ABQ_CENTER);
 }
 
 function hideAlert() {
-  const banner = document.getElementById('alert-banner')
-  if (banner.hidden) return
-  banner.hidden = true
-  google.maps.event.trigger(map, 'resize')
-  map.setCenter(ABQ_CENTER)
+  const banner = document.getElementById('alert-banner');
+  if (banner.hidden) return;
+  banner.hidden = true;
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter(ABQ_CENTER);
 }
 
 function loadAlerts() {
   if (new URLSearchParams(location.search).get('fakealert') === '1') {
-    showAlert(FAKE_ALERT)
-    return
+    showAlert(FAKE_ALERT);
+    return;
   }
-
   fetch(ALERT_URL)
     .then(res => {
-      if (!res.ok) throw new Error('alerts bad status')
-      return res.json()
+      if (!res.ok) throw new Error('alerts bad status');
+      return res.json();
     })
     .then(data => {
-      const worst = pickWorstAlert(data.features)
-      if (worst) showAlert(worst)
-      else hideAlert()
+      const worst = pickWorstAlert(data.features);
+      if (worst) showAlert(worst);
+      else hideAlert();
     })
-    .catch(err => console.error('alerts fetch failed', err))
+    .catch(err => console.error('alerts fetch failed', err));
 }
 
 document.getElementById('alert-banner').addEventListener('click', () => {
-  document.getElementById('alert-banner').classList.toggle('expanded')
-})
+  document.getElementById('alert-banner').classList.toggle('expanded');
+});
 
-loadWeather()
-loadAlerts()
+loadWeather();
+loadAlerts();
 setInterval(() => {
-  loadWeather()
-  loadAlerts()
-}, 10 * 60 * 1000)
+  loadWeather();
+  loadAlerts();
+}, 10 * 60 * 1000);
