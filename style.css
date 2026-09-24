@@ -65,6 +65,37 @@ body {
   flex: 1;
 }
 
+#search-card {
+  width: min(92vw, 340px);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+#search-card gmp-place-autocomplete {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#swap-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #ddd0bc;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+#search-error {
+  font-size: 0.85rem;
+  color: #7a7264;
+}
+
 #alert-banner {
   flex: 0 0 auto;
   padding: 10px 16px;

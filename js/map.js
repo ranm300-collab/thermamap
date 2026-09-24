@@ -42,6 +42,7 @@ function initMap() {
     mapTypeControl: false,
     streetViewControl: false
   });
+  initSearch();
 }
 
 function loadMapsScript() {
