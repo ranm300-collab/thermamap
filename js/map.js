@@ -11,7 +11,9 @@ const MAP_STYLE = [
   { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a8c5cf' }] },
   { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#b8c9a0' }] },
-  { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  // city name label was vanishing right at min zoom, force it on
+  { featureType: 'administrative.locality', elementType: 'labels', stylers: [{ visibility: 'on' }] }
 ];
 
 // zoom + bounds, was hitting blank map patches
