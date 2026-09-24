@@ -1,6 +1,8 @@
 const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
 
 let lastReadingTime = null;
+let lastFeelsLike = null;
+let lastUV = null;
 
 function updateFreshnessText() {
   const el = document.getElementById('wx-time');
@@ -23,6 +25,8 @@ function loadFromNWS() {
       const f = c * 9 / 5 + 32;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = '';
+      lastFeelsLike = f;
+      lastUV = null;
       lastReadingTime = new Date(data.properties.timestamp);
       updateFreshnessText();
     })
@@ -43,6 +47,8 @@ function loadWeather() {
       const uv = data.uvIndex;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
+      lastFeelsLike = feels;
+      lastUV = uv;
       lastReadingTime = new Date(data.currentTime);
       updateFreshnessText();
     })
@@ -80,8 +86,51 @@ function pickWorstAlert(features) {
 
 let lastAlertData = null;
 
+const HEAT_TIPS = [
+  'walking home from school, leave a little early and stick to shade',
+  'older folks, skip outdoor errands til it cools off tonight',
+  'waiting on the bus, find shade or duck inside somewhere close',
+  'working outside, take more water breaks than feels necessary'
+];
+
+// heat index can run up to 15f hotter in full sun, why shade routes matter
+function getHeatLabel(feels) {
+  if (feels >= 103) return 'Danger';
+  if (feels >= 90) return 'Extreme caution';
+  return null;
+}
+
+function getEffectiveFeelsLike() {
+  const fake = new URLSearchParams(location.search).get('fakeheat');
+  if (fake !== null) return Number(fake);
+  return lastFeelsLike;
+}
+
+function buildHeatTips() {
+  const tips = HEAT_TIPS.slice();
+  if (lastUV !== null && lastUV >= 8) tips.push('uv is brutal today too, shade matters more than usual');
+  return tips.join('\n');
+}
+
+function showHeatRisk(label, feels) {
+  const banner = document.getElementById('alert-banner');
+  document.getElementById('alert-headline').textContent = `${label} · feels like ${Math.round(feels)}°`;
+  document.getElementById('alert-instruction').textContent = buildHeatTips();
+  banner.classList.remove('severe', 'caution', 'expanded');
+  banner.classList.add(label === 'Danger' ? 'severe' : 'caution');
+  banner.hidden = false;
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter(ABQ_CENTER);
+}
+
 function updateBanner() {
-  if (lastAlertData) showAlert(lastAlertData);
+  if (lastAlertData) {
+    showAlert(lastAlertData);
+    return;
+  }
+  const feels = getEffectiveFeelsLike();
+  const label = feels === null ? null : getHeatLabel(feels);
+  if (label) showHeatRisk(label, feels);
   else hideAlert();
 }
 
