@@ -1,16 +1,17 @@
 const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
 
-function formatReadingTime(iso) {
-  const d = new Date(iso);
-  let h = d.getHours();
-  const ampm = h >= 12 ? 'pm' : 'am';
-  h = h % 12 || 12;
-  const m = String(d.getMinutes()).padStart(2, '0');
-  return `${h}:${m} ${ampm}`;
+let lastReadingTime = null;
+
+function updateFreshnessText() {
+  const el = document.getElementById('wx-time');
+  if (!lastReadingTime) return;
+  const mins = Math.round((Date.now() - lastReadingTime) / 60000);
+  const text = mins < 1 ? 'just now' : mins === 1 ? '1 min ago' : `${mins} min ago`;
+  el.textContent = 'as of ' + text;
 }
 
 function loadFromNWS() {
-  // google api down, fall back to nws
+  // google down, fall back to nws
   fetch('https://api.weather.gov/stations/KABQ/observations/latest')
     .then(res => {
       if (!res.ok) throw new Error('nws bad status');
@@ -22,7 +23,8 @@ function loadFromNWS() {
       const f = c * 9 / 5 + 32;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = '';
-      document.getElementById('wx-time').textContent = 'as of ' + formatReadingTime(data.properties.timestamp);
+      lastReadingTime = new Date(data.properties.timestamp);
+      updateFreshnessText();
     })
     .catch(err => console.error('nws fallback failed', err));
 }
@@ -41,7 +43,8 @@ function loadWeather() {
       const uv = data.uvIndex;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
-      document.getElementById('wx-time').textContent = 'as of ' + formatReadingTime(data.currentTime);
+      lastReadingTime = new Date(data.currentTime);
+      updateFreshnessText();
     })
     .catch(err => {
       console.error('google wx failed', err);
@@ -75,6 +78,13 @@ function pickWorstAlert(features) {
   return best;
 }
 
+let lastAlertData = null;
+
+function updateBanner() {
+  if (lastAlertData) showAlert(lastAlertData);
+  else hideAlert();
+}
+
 function showAlert(alert) {
   const banner = document.getElementById('alert-banner');
   document.getElementById('alert-headline').textContent = `${alert.event} until ${formatAlertEnd(alert.ends)}`;
@@ -96,7 +106,8 @@ function hideAlert() {
 
 function loadAlerts() {
   if (new URLSearchParams(location.search).get('fakealert') === '1') {
-    showAlert(FAKE_ALERT);
+    lastAlertData = FAKE_ALERT;
+    updateBanner();
     return;
   }
   fetch(ALERT_URL)
@@ -105,9 +116,8 @@ function loadAlerts() {
       return res.json();
     })
     .then(data => {
-      const worst = pickWorstAlert(data.features);
-      if (worst) showAlert(worst);
-      else hideAlert();
+      lastAlertData = pickWorstAlert(data.features);
+      updateBanner();
     })
     .catch(err => console.error('alerts fetch failed', err));
 }
@@ -115,10 +125,3 @@ function loadAlerts() {
 document.getElementById('alert-banner').addEventListener('click', () => {
   document.getElementById('alert-banner').classList.toggle('expanded');
 });
-
-loadWeather();
-loadAlerts();
-setInterval(() => {
-  loadWeather();
-  loadAlerts();
-}, 10 * 60 * 1000);
