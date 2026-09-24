@@ -1,5 +1,7 @@
 const ROUTE_COLOR = '#2f6fb0';
-const ALT_ROUTE_COLOR = '#a89f8f';
+const ROUTE_OUTLINE = '#fdf6ee';
+// alts were basically invisible, that gray was too close to the road color
+const ALT_ROUTE_COLOR = '#736b5c';
 
 let travelMode = 'WALKING';
 let routes = [];
@@ -7,28 +9,59 @@ let selectedRouteIndex = 0;
 let routePolylines = [];
 
 function clearRoutePolylines() {
-  routePolylines.forEach(line => line.setMap(null));
+  routePolylines.forEach(lines => {
+    lines.hit.setMap(null);
+    lines.outline.setMap(null);
+    lines.main.setMap(null);
+  });
   routePolylines = [];
 }
 
-function styleForIndex(i) {
-  if (i === selectedRouteIndex) {
-    return { strokeColor: ROUTE_COLOR, strokeWeight: 6, strokeOpacity: 0.95, zIndex: 2 };
-  }
-  return { strokeColor: ALT_ROUTE_COLOR, strokeWeight: 3, strokeOpacity: 0.7, zIndex: 1 };
+function makeRouteLines(route, i) {
+  // wide and invisible, just here so the thin alt lines are easy to tap
+  const hit = new google.maps.Polyline({
+    path: route.path,
+    map: map,
+    strokeOpacity: 0,
+    strokeWeight: 18,
+    zIndex: 5
+  });
+  const outline = new google.maps.Polyline({
+    path: route.path,
+    map: map,
+    strokeColor: ROUTE_OUTLINE,
+    strokeOpacity: 0,
+    strokeWeight: 10,
+    zIndex: 1
+  });
+  const main = new google.maps.Polyline({
+    path: route.path,
+    map: map,
+    zIndex: 2
+  });
+  hit.addListener('click', () => selectRoute(i));
+  main.addListener('click', () => selectRoute(i));
+  return { hit, outline, main };
+}
+
+function restyleRoutes() {
+  routePolylines.forEach((lines, i) => {
+    if (i === selectedRouteIndex) {
+      lines.outline.setOptions({ strokeOpacity: 0.9 });
+      lines.main.setOptions({ strokeColor: ROUTE_COLOR, strokeOpacity: 0.95, strokeWeight: 6, zIndex: 3 });
+    } else {
+      lines.outline.setOptions({ strokeOpacity: 0 });
+      lines.main.setOptions({ strokeColor: ALT_ROUTE_COLOR, strokeOpacity: 0.8, strokeWeight: 5, zIndex: 2 });
+    }
+  });
 }
 
 function drawRoutes() {
   clearRoutePolylines();
   routes.forEach((route, i) => {
-    const line = new google.maps.Polyline({
-      path: route.path,
-      map: map,
-      ...styleForIndex(i)
-    });
-    line.addListener('click', () => selectRoute(i));
-    routePolylines.push(line);
+    routePolylines.push(makeRouteLines(route, i));
   });
+  restyleRoutes();
 }
 
 function formatDuration(ms) {
@@ -60,7 +93,7 @@ function fitSelectedRoute() {
 
 function selectRoute(i) {
   selectedRouteIndex = i;
-  drawRoutes();
+  restyleRoutes();
   renderRouteList();
   fitSelectedRoute();
 }
