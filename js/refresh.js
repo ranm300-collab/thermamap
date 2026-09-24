@@ -1,6 +1,7 @@
 // ?fastrefresh=1 to watch ticks and jobs in the console
 const FAST_REFRESH = new URLSearchParams(location.search).get('fastrefresh') === '1';
 
+
 const TICK_MS = 10 * 1000;
 const jobs = [];
 
@@ -33,12 +34,11 @@ registerJob('weather', 5 * 60 * 1000, loadWeather);
 registerJob('alerts', 3 * 60 * 1000, loadAlerts);
 
 let loopTimer = null;
-
 function startLoop() {
   loopTimer = setInterval(tick, TICK_MS);
 }
 
-// no point burning quota on a tab nobody's looking at
+// no point burning quota on a tab nobodys looking at
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     clearInterval(loopTimer);

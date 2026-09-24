@@ -34,6 +34,7 @@ function loadFromNWS() {
 }
 
 function loadWeather() {
+  let retries = 0
   const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${GOOGLE_MAPS_KEY}&location.latitude=${WX_COORDS.lat}&location.longitude=${WX_COORDS.lng}&unitsSystem=IMPERIAL`;
 
   fetch(url)

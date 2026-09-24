@@ -1,6 +1,6 @@
 const ABQ_CENTER = { lat: 35.0844, lng: -106.6504 };
 
-// colors picked by eye, calmer than default
+// colors picked by eye, calmer then default
 // parks = shade
 const MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#e8e0d0' }] },
@@ -21,7 +21,7 @@ const METRO_BOUNDS = {
   north: 35.3,
   south: 34.9,
   east: -106.45,
-  west: -106.85
+  west: -106.85,
 };
 
 let map
