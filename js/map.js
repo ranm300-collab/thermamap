@@ -1,7 +1,7 @@
 const ABQ_CENTER = { lat: 35.0844, lng: -106.6504 };
 
-// picked these by eye, sandy land and soft roads read calmer than default gmaps colors
-// keeping poi.park visible since shade coverage from parks matters for the routing later
+// colors picked by eye, calmer than default
+// parks = shade
 const MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#e8e0d0' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#4a4238' }] },
@@ -14,10 +14,10 @@ const MAP_STYLE = [
   { featureType: 'transit', stylers: [{ visibility: 'off' }] }
 ];
 
-// was getting "no imagery here" patches when zooming in too far or drifting off the city
+// zoom + bounds, was hitting blank map patches
 const METRO_BOUNDS = {
-  north: 35.30,
-  south: 34.90,
+  north: 35.3,
+  south: 34.9,
   east: -106.45,
   west: -106.85
 };
