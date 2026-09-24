@@ -55,6 +55,12 @@ body {
   color: #7a7264;
 }
 
+#wx-time {
+  display: block;
+  font-size: 0.7rem;
+  color: #a39c8c;
+}
+
 #map {
   flex: 1;
 }

@@ -1,5 +1,14 @@
 const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
 
+function formatReadingTime(iso) {
+  const d = new Date(iso);
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m} ${ampm}`;
+}
+
 function loadFromNWS() {
   // google api down, fall back to nws
   fetch('https://api.weather.gov/stations/KABQ/observations/latest')
@@ -13,6 +22,7 @@ function loadFromNWS() {
       const f = c * 9 / 5 + 32;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = '';
+      document.getElementById('wx-time').textContent = 'as of ' + formatReadingTime(data.properties.timestamp);
     })
     .catch(err => console.error('nws fallback failed', err));
 }
@@ -31,6 +41,7 @@ function loadWeather() {
       const uv = data.uvIndex;
       document.getElementById('temp-now').textContent = Math.round(f) + '°F';
       document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
+      document.getElementById('wx-time').textContent = 'as of ' + formatReadingTime(data.currentTime);
     })
     .catch(err => {
       console.error('google wx failed', err);
