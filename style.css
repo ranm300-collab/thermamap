@@ -96,6 +96,22 @@ body {
   color: #7a7264;
 }
 
+#current-location-row {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: #efe6d6;
+  font-size: 0.9rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+#location-notice {
+  font-size: 0.85rem;
+  color: #7a7264;
+  margin-bottom: 8px;
+}
+
 #mode-toggle {
   display: flex;
   gap: 8px;
