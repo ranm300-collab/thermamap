@@ -96,6 +96,53 @@ body {
   color: #7a7264;
 }
 
+#mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd0bc;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fdf6ee;
+}
+
+#route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-row {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #efe6d6;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.route-row.selected {
+  background: #ddd0bc;
+  font-weight: 600;
+}
+
+#route-error {
+  font-size: 0.85rem;
+  color: #7a7264;
+  margin-top: 4px;
+}
+
 #alert-banner {
   flex: 0 0 auto;
   padding: 10px 16px;

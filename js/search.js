@@ -36,6 +36,7 @@ function setStartPlace(place) {
     icon: pinIcon(START_COLOR)
   });
   fitBothPins();
+  loadRoutes();
 }
 
 function setDestPlace(place) {
@@ -47,6 +48,7 @@ function setDestPlace(place) {
     icon: pinIcon(DEST_COLOR)
   });
   fitBothPins();
+  loadRoutes();
 }
 
 function wireAutocomplete(el, onPick) {
@@ -76,6 +78,8 @@ document.getElementById('swap-btn').addEventListener('click', () => {
   const tempValue = startEl.value;
   startEl.value = destEl.value;
   destEl.value = tempValue;
+
+  loadRoutes();
 });
 
 function initSearch() {

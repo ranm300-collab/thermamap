@@ -26,6 +26,12 @@
   <button id="swap-btn" type="button">⇅ swap</button>
   <div id="dest-slot"></div>
   <div id="search-error" hidden>search isn't loading right now</div>
+  <div id="mode-toggle">
+    <button type="button" id="mode-walk" class="mode-btn active">Walk</button>
+    <button type="button" id="mode-bike" class="mode-btn">Bike</button>
+  </div>
+  <div id="route-list"></div>
+  <div id="route-error" hidden></div>
 </div>
 
 <script src="js/config.js" defer></script>
@@ -33,5 +39,6 @@
 <script src="js/weather.js" defer></script>
 <script src="js/refresh.js" defer></script>
 <script src="js/search.js" defer></script>
+<script src="js/routes.js" defer></script>
 </body>
 </html>
