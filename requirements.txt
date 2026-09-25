@@ -3,3 +3,4 @@ numpy
 pystac-client
 planetary-computer
 matplotlib
+certifi
