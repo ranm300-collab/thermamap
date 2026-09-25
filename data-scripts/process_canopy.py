@@ -11,9 +11,12 @@ from rasterio.warp import reproject, transform, transform_bounds, Resampling
 
 RAW_DIR = 'data/canopy/raw'
 OUT_DIR = 'data/processed'
+# reading this file's own grid instead of recomputing bounds, so the 30m canopy
+# and lst grids land on the exact same pixels no matter what
 LST_GRID_PATH = 'data/processed/abq_lst_f.tif'
 TARGET_CRS = 'EPSG:32613'
 TREE_HEIGHT_M = 3  # shrubs and short stuff dont really shade someone walking
+# raw tiles are uint8 meters straight up, no nodata flag in the file, 0 = ground
 CHUNK_ROWS_30 = 50
 NODATA = -9999.0
 
@@ -70,7 +73,6 @@ def reproject_chunk_from_tiles(tile_paths, dst_transform, dst_w, dst_h):
             dest = np.where(covered > 0, temp, dest)
     return dest
 
-
 def process():
     with rasterio.open(LST_GRID_PATH) as lst:
         transform_30 = lst.transform
@@ -91,7 +93,7 @@ def process():
     profile_height5 = dict(profile_pct5, dtype='float32', nodata=NODATA)
     profile_pct30 = {
         'driver': 'GTiff', 'height': height_30, 'width': width_30, 'count': 1,
-        'dtype': 'uint8', 'crs': TARGET_CRS, 'transform': transform_30
+        'dtype': 'uint8', 'crs': TARGET_CRS, 'transform': transform_30,
     }
 
     pct5_path = f'{OUT_DIR}/abq_canopy_pct_5m.tif'
@@ -116,6 +118,7 @@ def process():
             raw = reproject_chunk_from_tiles(tile_paths, chunk_transform_1m, width_5 * 5, n_rows_5 * 5)
             tree_mask = raw >= TREE_HEIGHT_M
 
+            # reshape to (rows,5,cols,5) blocks then mean over axis 1&3, standard block-reduce trick
             tree_mask_5 = tree_mask.reshape(n_rows_5, 5, width_5, 5)
             pct_chunk = (tree_mask_5.mean(axis=(1, 3)) * 100).astype('uint8')
 
@@ -135,7 +138,6 @@ def process():
 
     return pct5_path, height5_path, pct30_path
 
-
 def save_preview(pct30_path, out_path):
     import matplotlib.pyplot as plt
     with rasterio.open(pct30_path) as src:
@@ -149,7 +151,6 @@ def save_preview(pct30_path, out_path):
     fig.colorbar(im, ax=ax, label='% canopy cover')
     fig.savefig(out_path, dpi=100, bbox_inches='tight')
     plt.close(fig)
-
 
 def sample_point(path, lat, lng):
     with rasterio.open(path) as src:

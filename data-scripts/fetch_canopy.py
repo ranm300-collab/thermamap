@@ -6,7 +6,7 @@ import ssl
 import certifi
 import urllib.request
 
-# this python install's own cert bundle is missing, urlretrieve fails ssl verify without this
+# this python installs own cert bundle is missing, urlretrieve fails ssl verify without this
 urllib.request.install_opener(
     urllib.request.build_opener(
         urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=certifi.where()))
@@ -27,7 +27,6 @@ def download(url, path):
     print(f'  downloading {os.path.basename(path)}...')
     urllib.request.urlretrieve(url, path)
 
-
 def find_matching_tiles():
     # tiles are a quadkey grid, the dataset ships a geojson index of tile -> footprint
     # instead of us guessing the quadkey math
@@ -45,7 +44,6 @@ def find_matching_tiles():
         if tw < BBOX[2] and te > BBOX[0] and ts < BBOX[3] and tn > BBOX[1]:
             matches.append(feature['properties']['tile'])
     return matches
-
 
 if __name__ == '__main__':
     os.makedirs(OUT_DIR, exist_ok=True)
