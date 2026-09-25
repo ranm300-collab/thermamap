@@ -1,6 +1,7 @@
 # grabs summer landsat surface temp scenes over abq from planetary computer, download only for now
 
 import os
+import time
 import pystac_client
 import planetary_computer
 import rasterio
@@ -11,7 +12,7 @@ STAC_URL = 'https://planetarycomputer.microsoft.com/api/stac/v1'
 COLLECTION = 'landsat-c2-l2'
 BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
 YEARS = [2024, 2025, 2026]
-PLATFORMS = ['landsat-8', 'landsat-9']
+PLATFORMS = ['landsat-8', 'landsat-9']  # lowercase w/ dash, not "Landsat 8"
 MAX_CLOUD = 10
 OUT_DIR = 'data/landsat'
 
@@ -20,14 +21,13 @@ def covers_bbox(item):
     ib = item.bbox
     return ib[0] <= BBOX[0] and ib[1] <= BBOX[1] and ib[2] >= BBOX[2] and ib[3] >= BBOX[3]
 
-
 def scene_name(item):
     d = item.datetime.strftime('%Y%m%d')
     code = 'LC08' if item.properties['platform'] == 'landsat-8' else 'LC09'
     return f'{code}_{d}'
 
-
 def find_scenes(max_cloud):
+    # pc's stac api warns it doesn't declare QUERY conformance, filtering works fine anyway
     catalog = pystac_client.Client.open(STAC_URL, modifier=planetary_computer.sign_inplace)
     items = []
     for year in YEARS:
@@ -64,7 +64,6 @@ def download_band(item, asset_key, out_path):
         with rasterio.open(out_path, 'w', **profile) as dst:
             dst.write(data, 1)
 
-
 def fetch_all(max_cloud):
     os.makedirs(OUT_DIR, exist_ok=True)
     print(f'searching, cloud cover under {max_cloud}%...')
@@ -74,6 +73,7 @@ def fetch_all(max_cloud):
     for item in items:
         name = scene_name(item)
         print(f'downloading {name}...')
+        # lwir11 is the actual asset key, ST_B10 is just the band's title/description
         download_band(item, 'lwir11', f'{OUT_DIR}/{name}_st.tif')
         download_band(item, 'qa_pixel', f'{OUT_DIR}/{name}_qa.tif')
 
@@ -89,7 +89,6 @@ def print_summary(items):
     for item in items:
         print(' ', scene_name(item), f"{item.properties['eo:cloud_cover']}% cloud")
     print(f'total size on disk: {total_bytes / (1024 * 1024):.1f} mb')
-
 
 if __name__ == '__main__':
     scenes = fetch_all(MAX_CLOUD)
