@@ -2,3 +2,4 @@ rasterio
 numpy
 pystac-client
 planetary-computer
+matplotlib
