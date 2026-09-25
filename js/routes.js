@@ -17,14 +17,15 @@ function clearRoutePolylines() {
   routePolylines = [];
 }
 
+
 function makeRouteLines(route, i) {
-  // wide and invisible, just here so the thin alt lines are easy to tap
+  // wide + invisible, just so the thin alt lines are actually tappable
   const hit = new google.maps.Polyline({
     path: route.path,
     map: map,
     strokeOpacity: 0,
     strokeWeight: 18,
-    zIndex: 5
+    zIndex: 5,
   });
   const outline = new google.maps.Polyline({
     path: route.path,
@@ -87,7 +88,7 @@ function renderRouteList() {
 function fitSelectedRoute() {
   const route = routes[selectedRouteIndex];
   if (!route) return;
-  // extra top/left padding, card sits over that corner of the map
+  // extra top/left padding, card sits over teh corner of the map
   map.fitBounds(route.viewport, { top: 40, left: 280, right: 40, bottom: 40 });
 }
 

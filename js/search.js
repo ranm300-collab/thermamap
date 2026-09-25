@@ -82,7 +82,7 @@ function useCurrentLocation() {
         fillOpacity: 0.12,
         strokeColor: START_COLOR,
         strokeOpacity: 0.3,
-        strokeWeight: 1
+        strokeWeight: 1,
       });
 
       if (!isInsideMetro(lat, lng)) {
@@ -187,7 +187,7 @@ function initSearch() {
       document.getElementById('start-slot').appendChild(startEl);
       wireAutocomplete(startEl, setStartPlace);
 
-      // focusin/focusout cross the shadow boundary, plain focus/blur don't
+      // focusin/focusout cross the shadow boundry, plain focus/blur dont
       const locationRow = document.getElementById('current-location-row');
       startEl.addEventListener('focusin', () => { locationRow.hidden = false; });
       startEl.addEventListener('focusout', () => { locationRow.hidden = true; });
@@ -195,7 +195,7 @@ function initSearch() {
         locationRow.hidden = true;
         clearHereMarker();
       });
-      // without this, tapping the row blurs the input first and the click never lands
+      // without this the row blurs before the click lands, mousedown fires first
       locationRow.addEventListener('mousedown', e => e.preventDefault());
       locationRow.addEventListener('click', useCurrentLocation);
 
