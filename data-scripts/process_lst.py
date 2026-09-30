@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 LANDSAT_DIR = 'data/landsat'
 OUT_DIR = 'data/processed'
 BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
-TARGET_CRS = 'EPSG:32613'  # utm 13n, what most of our scenes are already in
+TARGET_CRS = 'EPSG:32613'  # utm 13n, what most of our scenes are alredy in
 PIXEL_SIZE = 30
 ST_SCALE = 0.00341802
 ST_OFFSET = 149.0
@@ -36,7 +36,6 @@ def build_target_grid():
     grid_transform = from_origin(left, top, PIXEL_SIZE, PIXEL_SIZE)
     return grid_transform, width, height
 
-
 def find_scene_pairs():
     pairs = []
     for st_path in sorted(glob.glob(f'{LANDSAT_DIR}/*_st.tif')):
@@ -45,7 +44,6 @@ def find_scene_pairs():
         if os.path.exists(qa_path):
             pairs.append((name, st_path, qa_path))
     return pairs
-
 
 def load_scene_fahrenheit(st_path, qa_path, grid_transform, width, height):
     with rasterio.open(st_path) as st_src:
@@ -87,7 +85,6 @@ def load_scene_fahrenheit(st_path, qa_path, grid_transform, width, height):
 
     return fahrenheit
 
-
 def write_geotiff(path, array, grid_transform):
     profile = {
         'driver': 'GTiff',
@@ -97,12 +94,11 @@ def write_geotiff(path, array, grid_transform):
         'dtype': 'float32',
         'crs': TARGET_CRS,
         'transform': grid_transform,
-        'nodata': NODATA
+        'nodata': NODATA,
     }
     out = np.where(np.isnan(array), NODATA, array).astype('float32')
     with rasterio.open(path, 'w', **profile) as dst:
         dst.write(out, 1)
-
 
 def save_preview(anomaly, path):
     masked = np.ma.masked_invalid(anomaly)
@@ -115,7 +111,6 @@ def save_preview(anomaly, path):
     fig.colorbar(im, ax=ax, label='degrees f vs citywide median')
     fig.savefig(path, dpi=100, bbox_inches='tight')
     plt.close(fig)
-
 
 def sample_spots(anomaly, grid_transform):
     results = {}
@@ -142,6 +137,7 @@ if __name__ == '__main__':
 
     print('combining scenes...')
     valid_count = np.sum(~np.isnan(stack), axis=0).astype('float32')
+    # median not mean, one hazy or weirdly cold day shouldnt drag the whole pixel around
     median_f = np.nanmedian(stack, axis=0)
     median_f[valid_count < MIN_VALID_SCENES] = np.nan
 
