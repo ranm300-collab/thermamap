@@ -1,0 +1,34 @@
+{
+  "origin": {
+    "lng": -106.85,
+    "lat": 35.35
+  },
+  "row_order": "north to south, west to east within a row",
+  "cell_size_deg": 0.0001,
+  "grid_width": 4000,
+  "grid_height": 4501,
+  "chunk_size_cells": 100,
+  "chunks_x": 40,
+  "chunks_y": 46,
+  "hours": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "bytes_per_cell": 15,
+  "layout": [
+    "canopy_pct (0-100, 255=nodata)",
+    "shade_pct for hours 7..19, 13 bytes (0-100, 255=nodata)",
+    "temp_anom_f stored as value+30 (0-60, 255=nodata)"
+  ]
+}
