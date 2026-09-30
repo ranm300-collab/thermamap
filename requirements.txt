@@ -4,3 +4,4 @@ pystac-client
 planetary-computer
 matplotlib
 certifi
+mercantile
