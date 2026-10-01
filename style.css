@@ -231,6 +231,37 @@ body {
   color: #fdf6ee;
 }
 
+#leave-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#leave-label-btn, #leave-reset-btn {
+  padding: 10px 14px;
+  border: 1px solid #ddd0bc;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+#leave-time-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ddd0bc;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+#leave-time-label {
+  font-size: 0.75rem;
+  color: #7a7264;
+  margin-bottom: 8px;
+}
+
 #route-cards-panel {
   position: fixed;
   z-index: 10;

@@ -22,8 +22,10 @@ const HEAT_LEVEL_COLORS = {
 };
 
 let routeScores = [];
+let routeRawData = []; // {samples, cells} per route, fetched once and reused when leave time changes
 let scoring = false;
 let coolestIndex = -1;
+let userPickedRoute = false; // true once they tap a route themselves, resets on a new search
 
 function haversineMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -60,75 +62,96 @@ function sampleRoute(path, spacingM) {
   return samples;
 }
 
-function shadeFractionFor(cell, hour) {
+// blends toward the next hour's map instead of snapping, so 2:30 is halfway between
+// the 2pm and 3pm shade and the line/numbers don't jump the second the clock ticks over
+function shadeFractionFor(cell, date) {
+  const hour = date.getHours();
   if (hour < SUN_UP_HOUR || hour > SUN_DOWN_HOUR) return 1;
-  const byte = cell.shade[hour];
-  return byte === null ? null : byte / 100;
+
+  const byteA = cell.shade[hour];
+  const byteB = hour < SUN_DOWN_HOUR ? cell.shade[hour + 1] : null;
+  if (byteA === null && byteB === null) return null;
+  if (byteA === null) return byteB / 100;
+  if (byteB === null) return byteA / 100;
+
+  const t = date.getMinutes() / 60;
+  return (byteA + (byteB - byteA) * t) / 100;
 }
 
-function scoreRoute(route, departureMs) {
+// the expensive part: sample the path and fetch grid chunks. done once per route,
+// reused for every rescore (leave time changes, the "now" refresh, the better-time check)
+function fetchRouteRawData(route) {
   const samples = sampleRoute(route.path, SAMPLE_SPACING_M);
-  const totalDist = samples[samples.length - 1].dist || 1;
   const points = samples.map(s => ({ lat: s.lat, lng: s.lng }));
+  return getGridCells(points).then(cells => ({ samples, cells }));
+}
 
-  return getGridCells(points).then(cells => {
-    let shadeWeighted = 0;
-    let canopyWeighted = 0;
-    let anomWeighted = 0;
-    let validWeight = 0;
-    let sunMs = 0;
-    let scoreMs = 0;
-    let anyDaylight = false;
-    const sampleData = []; // kept around so the route line can be colored later w/o rescoring
+// the cheap part: turn already-fetched samples/cells into a score for one departure time
+function computeRouteScore(route, raw, departureMs) {
+  const { samples, cells } = raw;
+  const totalDist = samples[samples.length - 1].dist || 1;
 
-    for (let i = 0; i < samples.length; i++) {
-      const cell = cells[i];
-      const fraction = samples[i].dist / totalDist;
-      const hour = new Date(departureMs + fraction * route.durationMillis).getHours();
-      if (hour >= SUN_UP_HOUR && hour <= SUN_DOWN_HOUR) anyDaylight = true;
+  let shadeWeighted = 0;
+  let canopyWeighted = 0;
+  let anomWeighted = 0;
+  let validWeight = 0;
+  let sunMs = 0;
+  let scoreMs = 0;
+  let anyDaylight = false;
+  const sampleData = []; // kept around so the route line can be colored later w/o rescoring
 
-      let shadeFrac = null;
-      let anomaly = null;
-      if (cell && cell.anomaly !== null && cell.canopy !== null) {
-        shadeFrac = shadeFractionFor(cell, hour);
-        anomaly = cell.anomaly;
-      }
-      sampleData.push({ lat: samples[i].lat, lng: samples[i].lng, dist: samples[i].dist, shadeFrac, anomaly });
+  for (let i = 0; i < samples.length; i++) {
+    const cell = cells[i];
+    const fraction = samples[i].dist / totalDist;
+    const sampleDate = new Date(departureMs + fraction * route.durationMillis);
+    const hour = sampleDate.getHours();
+    if (hour >= SUN_UP_HOUR && hour <= SUN_DOWN_HOUR) anyDaylight = true;
 
-      if (i === 0 || shadeFrac === null) continue;
-
-      const weight = samples[i].dist - samples[i - 1].dist;
-      const stepMs = (weight / totalDist) * route.durationMillis;
-
-      shadeWeighted += weight * shadeFrac;
-      canopyWeighted += weight * cell.canopy;
-      anomWeighted += weight * anomaly;
-      validWeight += weight;
-
-      const sunFrac = 1 - shadeFrac;
-      sunMs += stepMs * sunFrac;
-      const heatFactor = 1 + Math.max(0, anomaly) / HEAT_FACTOR_DIVISOR;
-      scoreMs += stepMs * sunFrac * heatFactor;
+    let shadeFrac = null;
+    let anomaly = null;
+    if (cell && cell.anomaly !== null && cell.canopy !== null) {
+      shadeFrac = shadeFractionFor(cell, sampleDate);
+      anomaly = cell.anomaly;
     }
+    sampleData.push({ lat: samples[i].lat, lng: samples[i].lng, dist: samples[i].dist, shadeFrac, anomaly });
 
-    if (validWeight === 0) {
-      return {
-        shadePct: 0, canopyPct: 0, groundAnom: 0, sunMinutes: 0, score: Infinity, coverage: 0,
-        samples: sampleData, afterDark: !anyDaylight
-      };
-    }
+    if (i === 0 || shadeFrac === null) continue;
 
+    const weight = samples[i].dist - samples[i - 1].dist;
+    const stepMs = (weight / totalDist) * route.durationMillis;
+
+    shadeWeighted += weight * shadeFrac;
+    canopyWeighted += weight * cell.canopy;
+    anomWeighted += weight * anomaly;
+    validWeight += weight;
+
+    const sunFrac = 1 - shadeFrac;
+    sunMs += stepMs * sunFrac;
+    const heatFactor = 1 + Math.max(0, anomaly) / HEAT_FACTOR_DIVISOR;
+    scoreMs += stepMs * sunFrac * heatFactor;
+  }
+
+  if (validWeight === 0) {
     return {
-      shadePct: (shadeWeighted / validWeight) * 100,
-      canopyPct: canopyWeighted / validWeight,
-      groundAnom: anomWeighted / validWeight,
-      sunMinutes: sunMs / 60000,
-      score: scoreMs / 60000,
-      coverage: validWeight / totalDist,
-      samples: sampleData,
-      afterDark: !anyDaylight
+      shadePct: 0, canopyPct: 0, groundAnom: 0, sunMinutes: 0, score: Infinity, coverage: 0,
+      samples: sampleData, afterDark: !anyDaylight
     };
-  });
+  }
+
+  return {
+    shadePct: (shadeWeighted / validWeight) * 100,
+    canopyPct: canopyWeighted / validWeight,
+    groundAnom: anomWeighted / validWeight,
+    sunMinutes: sunMs / 60000,
+    score: scoreMs / 60000,
+    coverage: validWeight / totalDist,
+    samples: sampleData,
+    afterDark: !anyDaylight
+  };
+}
+
+function currentDepartureMs() {
+  return leaveTimeMs === null ? Date.now() : leaveTimeMs;
 }
 
 function heatLevel(shadeFrac, anomaly) {
@@ -198,7 +221,13 @@ function pickCoolestRoute() {
   });
 
   coolestIndex = bestIndex;
-  selectRoute(bestIndex);
+  if (userPickedRoute) {
+    // they picked their own route already, just refresh its line/cards, don't yank the selection
+    colorSelectedRoute();
+    renderRouteCards();
+  } else {
+    selectRoute(bestIndex);
+  }
 }
 
 function fastestRouteIndex() {
@@ -275,19 +304,32 @@ function logScoreTable() {
   console.table(rows);
 }
 
+function debugScoreOn() {
+  return new URLSearchParams(location.search).get('debugscore') === '1';
+}
+
+// turns already-fetched raw data into scores for whatever the current leave time is.
+// no network calls here, so this is cheap enough to run on every leave time change
+function rescoreAllFromCache() {
+  if (!routes.length) return;
+  const departureMs = currentDepartureMs();
+  routeScores = routes.map((route, i) => computeRouteScore(route, routeRawData[i], departureMs));
+  pickCoolestRoute();
+  if (debugScoreOn()) logScoreTable();
+}
+
 function scoreAllRoutes() {
   if (!routes.length) return;
   scoring = true;
   coolestIndex = -1;
+  routeRawData = [];
   renderRouteCards();
 
-  const departureMs = Date.now();
-  Promise.all(routes.map(route => scoreRoute(route, departureMs)))
-    .then(results => {
-      routeScores = results;
+  Promise.all(routes.map(route => fetchRouteRawData(route)))
+    .then(rawResults => {
+      routeRawData = rawResults;
       scoring = false;
-      pickCoolestRoute();
-      if (new URLSearchParams(location.search).get('debugscore') === '1') logScoreTable();
+      rescoreAllFromCache();
     })
     .catch(err => {
       console.error('route scoring failed', err);
@@ -295,3 +337,13 @@ function scoreAllRoutes() {
       renderRouteCards();
     });
 }
+
+// keeps the "now" numbers honest as the clock moves, only matters when not following a picked time
+function rescoreIfFollowingNow() {
+  if (leaveTimeMs !== null || scoring) return;
+  rescoreAllFromCache();
+}
+
+// refresh.js loads before this file so it can't reference this fn by name itself,
+// registering it from here instead works the same since registerJob already exists by now
+registerJob('rescore', 5 * 60 * 1000, rescoreIfFollowingNow);

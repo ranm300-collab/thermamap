@@ -181,6 +181,76 @@ document.getElementById('swap-btn').addEventListener('click', () => {
   updateHeatMarkers();
 });
 
+let leaveTimeMs = null; // null = follow "now", otherwise a specific today/tomorrow timestamp
+
+function pad2(n) {
+  return n < 10 ? '0' + n : String(n);
+}
+
+function formatClockTime(d) {
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h}:${pad2(d.getMinutes())} ${ampm}`;
+}
+
+function isTomorrow(d) {
+  return d.toDateString() !== new Date().toDateString();
+}
+
+function leaveLabelText() {
+  if (leaveTimeMs === null) return 'Leave: Now';
+  const d = new Date(leaveTimeMs);
+  return 'Leave: ' + (isTomorrow(d) ? 'tomorrow ' : '') + formatClockTime(d);
+}
+
+// used on the cards panel, past-tense framing reads better there than the picker's "Leave:"
+function leaveTimeCardsLabel() {
+  if (leaveTimeMs === null) return 'leaving now';
+  const d = new Date(leaveTimeMs);
+  return 'leaving ' + (isTomorrow(d) ? 'tomorrow ' : '') + formatClockTime(d);
+}
+
+function closeLeaveTimePicker() {
+  document.getElementById('leave-label-btn').hidden = false;
+  document.getElementById('leave-time-input').hidden = true;
+  document.getElementById('leave-reset-btn').hidden = true;
+}
+
+function setLeaveTime(ms) {
+  leaveTimeMs = ms;
+  document.getElementById('leave-label-btn').textContent = leaveLabelText();
+  closeLeaveTimePicker();
+  rescoreAllFromCache();
+}
+
+function openLeaveTimePicker() {
+  const input = document.getElementById('leave-time-input');
+  const base = leaveTimeMs === null ? new Date() : new Date(leaveTimeMs);
+  input.value = `${pad2(base.getHours())}:${pad2(base.getMinutes())}`;
+  document.getElementById('leave-label-btn').hidden = true;
+  input.hidden = false;
+  document.getElementById('leave-reset-btn').hidden = false;
+  input.focus();
+  // chrome/android can pop the native picker right away instead of waiting for a second tap,
+  // but it throws in some contexts (no real user gesture, policy stuff), input still works either way
+  if (input.showPicker) {
+    try { input.showPicker(); } catch (err) { /* fine, they can just tap the field */ }
+  }
+}
+
+document.getElementById('leave-label-btn').addEventListener('click', openLeaveTimePicker);
+document.getElementById('leave-reset-btn').addEventListener('click', () => setLeaveTime(null));
+document.getElementById('leave-time-input').addEventListener('change', () => {
+  const val = document.getElementById('leave-time-input').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  const picked = new Date();
+  picked.setHours(h, m, 0, 0);
+  if (picked.getTime() < Date.now()) picked.setDate(picked.getDate() + 1); // already passed today, must mean tomorrow
+  setLeaveTime(picked.getTime());
+});
+
 function initSearch() {
   google.maps.importLibrary('places')
     .then(({ PlaceAutocompleteElement }) => {

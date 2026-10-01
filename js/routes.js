@@ -39,7 +39,7 @@ function drawRouteSegments(i, runs) {
       strokeWeight: 6,
       zIndex: 3
     });
-    seg.addListener('click', () => selectRoute(i));
+    seg.addListener('click', () => selectRouteByUser(i));
     return seg;
   });
 }
@@ -67,8 +67,8 @@ function makeRouteLines(route, i) {
     map: map,
     zIndex: 2
   });
-  hit.addListener('click', () => selectRoute(i));
-  main.addListener('click', () => selectRoute(i));
+  hit.addListener('click', () => selectRouteByUser(i));
+  main.addListener('click', () => selectRouteByUser(i));
   return { hit, outline, main, segments: [] };
 }
 
@@ -137,6 +137,7 @@ function renderRouteCards() {
   const panel = document.getElementById('route-cards-panel');
   panel.hidden = !routes.length;
   positionRouteCardsPanel();
+  document.getElementById('leave-time-label').textContent = leaveTimeCardsLabel();
   const list = document.getElementById('route-cards');
   list.innerHTML = '';
 
@@ -176,7 +177,7 @@ function renderRouteCards() {
     }
 
     card.addEventListener('click', () => {
-      selectRoute(i);
+      selectRouteByUser(i);
       if (!sheetExpanded) setSheetExpanded(true);
     });
     list.appendChild(card);
@@ -203,6 +204,12 @@ function selectRoute(i) {
   fitSelectedRoute();
 }
 
+// a tap, not the auto coolest pick, so stop auto-switching the selection til the next search
+function selectRouteByUser(i) {
+  userPickedRoute = true;
+  selectRoute(i);
+}
+
 function setRouteError(msg) {
   const el = document.getElementById('route-error');
   el.textContent = msg;
@@ -215,6 +222,7 @@ function loadRoutes() {
   document.getElementById('route-error').hidden = true;
   routeScores = [];
   coolestIndex = -1;
+  userPickedRoute = false;
   sheetExpanded = false;
   document.getElementById('route-cards-panel').classList.remove('expanded');
 

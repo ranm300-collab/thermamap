@@ -49,11 +49,17 @@
     <button type="button" id="mode-walk" class="mode-btn active">Walk</button>
     <button type="button" id="mode-bike" class="mode-btn">Bike</button>
   </div>
+  <div id="leave-row">
+    <button type="button" id="leave-label-btn">Leave: Now</button>
+    <input type="time" id="leave-time-input" hidden>
+    <button type="button" id="leave-reset-btn" hidden>Now</button>
+  </div>
   <div id="route-error" hidden></div>
 </div>
 
 <div id="route-cards-panel" hidden>
   <div id="route-sheet-handle"></div>
+  <div id="leave-time-label"></div>
   <div id="route-cards"></div>
   <div id="route-color-key">
     <span class="route-color-key-item"><span class="route-color-key-bar shade"></span>shade</span>
