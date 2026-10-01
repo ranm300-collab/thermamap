@@ -23,7 +23,18 @@
 
 <button id="heat-toggle" type="button">Heat</button>
 <div id="heat-legend" hidden>
-  <div id="heat-legend-bar"></div>
+  <div id="heat-legend-bar">
+    <div id="heat-marker-start" class="heat-marker" hidden>
+      <div class="heat-marker-label"></div>
+      <div class="heat-marker-shape"></div>
+    </div>
+    <div id="heat-marker-dest" class="heat-marker" hidden>
+      <div class="heat-marker-label"></div>
+      <div class="heat-marker-shape"></div>
+    </div>
+  </div>
+  <div id="heat-marker-start-nodata" class="heat-marker-nodata" hidden>start: no heat data here</div>
+  <div id="heat-marker-dest-nodata" class="heat-marker-nodata" hidden>dest: no heat data here</div>
   <div id="heat-legend-caption">summer ground temps from nasa/usgs landsat</div>
 </div>
 
@@ -45,6 +56,7 @@
 <script src="js/config.js" defer></script>
 <script src="js/map.js" defer></script>
 <script src="js/heatlayer.js" defer></script>
+<script src="js/grid.js" defer></script>
 <script src="js/weather.js" defer></script>
 <script src="js/refresh.js" defer></script>
 <script src="js/search.js" defer></script>

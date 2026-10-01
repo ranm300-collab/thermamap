@@ -90,9 +90,69 @@ body {
 }
 
 #heat-legend-bar {
+  position: relative;
   height: 10px;
+  margin-top: 16px;
   border-radius: 5px;
   background: linear-gradient(to right, rgb(47, 111, 176), rgb(244, 237, 224), rgb(196, 60, 30));
+}
+
+.heat-marker {
+  position: absolute;
+  bottom: 100%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.heat-marker.nudge .heat-marker-label {
+  margin-bottom: 14px;
+}
+
+.heat-marker-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #fdf6ee;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+#heat-marker-start .heat-marker-label {
+  background: #3d6b5c;
+}
+
+#heat-marker-dest .heat-marker-label {
+  background: #c15a3c;
+}
+
+#heat-marker-start .heat-marker-shape {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3d6b5c;
+  border: 1px solid #fdf6ee;
+}
+
+#heat-marker-dest .heat-marker-shape {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #c15a3c;
+}
+
+.heat-marker-nodata {
+  margin-top: 4px;
+  font-size: 0.65rem;
+  color: #7a7264;
+  text-align: center;
+}
+
+#heat-legend.compact #heat-legend-caption {
+  display: none;
 }
 
 #heat-legend-caption {

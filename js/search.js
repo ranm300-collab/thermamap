@@ -91,6 +91,7 @@ function useCurrentLocation() {
 
       fitBothPins();
       loadRoutes();
+      updateHeatMarkers();
     },
     err => {
       row.textContent = 'Current location';
@@ -124,6 +125,7 @@ function setStartPlace(place) {
   });
   fitBothPins();
   loadRoutes();
+  updateHeatMarkers();
 }
 
 function setDestPlace(place) {
@@ -136,6 +138,7 @@ function setDestPlace(place) {
   });
   fitBothPins();
   loadRoutes();
+  updateHeatMarkers();
 }
 
 function wireAutocomplete(el, onPick) {
@@ -175,6 +178,7 @@ document.getElementById('swap-btn').addEventListener('click', () => {
   destEl.value = tempValue;
 
   loadRoutes();
+  updateHeatMarkers();
 });
 
 function initSearch() {
