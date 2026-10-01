@@ -79,7 +79,16 @@ function renderRouteList() {
   routes.forEach((route, i) => {
     const row = document.createElement('div');
     row.className = 'route-row' + (i === selectedRouteIndex ? ' selected' : '');
-    row.textContent = `${formatDuration(route.durationMillis)} · ${formatDistance(route.distanceMeters)}`;
+
+    const main = document.createElement('div');
+    main.textContent = `${formatDuration(route.durationMillis)} · ${formatDistance(route.distanceMeters)}`;
+    row.appendChild(main);
+
+    const sub = document.createElement('div');
+    sub.className = 'route-row-sub';
+    sub.textContent = routeRowSubtext(i);
+    row.appendChild(sub);
+
     row.addEventListener('click', () => selectRoute(i));
     list.appendChild(row);
   });
@@ -109,6 +118,8 @@ function loadRoutes() {
   if (!startPlace || !destPlace) return;
 
   document.getElementById('route-error').hidden = true;
+  routeScores = [];
+  coolestIndex = -1;
 
   google.maps.importLibrary('routes')
     .then(({ Route }) => {
@@ -134,6 +145,7 @@ function loadRoutes() {
       drawRoutes();
       renderRouteList();
       fitSelectedRoute();
+      scoreAllRoutes();
     })
     .catch(err => {
       console.error('routes request failed', err);

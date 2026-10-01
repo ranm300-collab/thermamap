@@ -250,6 +250,13 @@ body {
   font-weight: 600;
 }
 
+.route-row-sub {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #7a7264;
+}
+
 #route-error {
   font-size: 0.85rem;
   color: #7a7264;
