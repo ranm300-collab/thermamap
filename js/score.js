@@ -177,7 +177,6 @@ function colorSelectedRoute() {
   routes.forEach((route, i) => clearRouteSegments(i));
 
   const s = routeScores[selectedRouteIndex];
-  document.getElementById('route-night-note').hidden = !(s && s.afterDark);
   if (!s || !s.samples || s.afterDark) return;
 
   drawRouteSegments(selectedRouteIndex, buildRuns(s.samples));
@@ -202,15 +201,61 @@ function pickCoolestRoute() {
   selectRoute(bestIndex);
 }
 
-// second line under each route row, routes.js calls this
-function routeRowSubtext(i) {
+function fastestRouteIndex() {
+  let best = 0;
+  routes.forEach((r, i) => { if (r.durationMillis < routes[best].durationMillis) best = i; });
+  return best;
+}
+
+// the heat line on a route card, routes.js calls this
+function routeCardHeatLine(i) {
   if (scoring) return 'checking shade...';
   const s = routeScores[i];
   if (!s) return '';
+  if (s.afterDark) return 'after dark, shade does not matter much right now';
   const anomStr = (s.groundAnom >= 0 ? '+' : '') + Math.round(s.groundAnom) + '°';
-  let text = `${Math.round(s.shadePct)}% shade · ${anomStr} ground`;
-  if (i === coolestIndex) text += ' · coolest';
-  return text;
+  return `${Math.round(s.shadePct)}% shade · ${anomStr} ground`;
+}
+
+function routeTags(i) {
+  if (scoring) return '';
+  const isFastest = i === fastestRouteIndex();
+  const isCoolest = i === coolestIndex;
+  if (isFastest && isCoolest) return 'fastest and coolest';
+  if (isCoolest) return 'coolest';
+  if (isFastest) return 'fastest';
+  return '';
+}
+
+// trade off vs the fastest route, in plain words. skipped for the fastest card itself
+function routeComparisonText(i) {
+  if (scoring) return '';
+  const fastestIndex = fastestRouteIndex();
+  if (i === fastestIndex) return '';
+
+  const s = routeScores[i];
+  const fastest = routeScores[fastestIndex];
+  if (!s || !fastest) return '';
+
+  const minutesLonger = Math.round((routes[i].durationMillis - routes[fastestIndex].durationMillis) / 60000);
+  const sunDiff = fastest.sunMinutes - s.sunMinutes; // + means less sun than the fastest route
+  const anomDiff = fastest.groundAnom - s.groundAnom; // + means cooler ground than the fastest route
+
+  const parts = [];
+  if (minutesLonger >= 1) parts.push(`${minutesLonger} min longer`);
+
+  if (Math.abs(sunDiff) < 2 && Math.abs(anomDiff) < 1) {
+    parts.push('about the same heat as the fastest');
+  } else {
+    if (Math.abs(sunDiff) >= 2) {
+      parts.push(`${Math.round(Math.abs(sunDiff))} ${sunDiff > 0 ? 'fewer' : 'more'} min in direct sun`);
+    }
+    if (Math.abs(anomDiff) >= 1) {
+      parts.push(`ground ~${Math.round(Math.abs(anomDiff))}°F ${anomDiff > 0 ? 'cooler' : 'hotter'}`);
+    }
+  }
+
+  return parts.join(' · ');
 }
 
 function logScoreTable() {
@@ -234,7 +279,7 @@ function scoreAllRoutes() {
   if (!routes.length) return;
   scoring = true;
   coolestIndex = -1;
-  renderRouteList();
+  renderRouteCards();
 
   const departureMs = Date.now();
   Promise.all(routes.map(route => scoreRoute(route, departureMs)))
@@ -247,6 +292,6 @@ function scoreAllRoutes() {
     .catch(err => {
       console.error('route scoring failed', err);
       scoring = false;
-      renderRouteList();
+      renderRouteCards();
     });
 }
