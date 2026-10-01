@@ -113,6 +113,14 @@ function buildHeatTips() {
   return tips.join('\n');
 }
 
+// tick() fires on page load before the maps script (it's async) has set google/map, so
+// fakealert/fakeheat could crash here instantly. guard it instead of racing to load first
+function nudgeMapForBanner() {
+  if (!map) return;
+  google.maps.event.trigger(map, 'resize');
+  map.setCenter(ABQ_CENTER);
+}
+
 function showHeatRisk(label, feels) {
   const banner = document.getElementById('alert-banner');
   document.getElementById('alert-headline').textContent = `${label} · feels like ${Math.round(feels)}°`;
@@ -120,8 +128,7 @@ function showHeatRisk(label, feels) {
   banner.classList.remove('severe', 'caution', 'expanded');
   banner.classList.add(label === 'Danger' ? 'severe' : 'caution');
   banner.hidden = false;
-  google.maps.event.trigger(map, 'resize');
-  map.setCenter(ABQ_CENTER);
+  nudgeMapForBanner();
 }
 
 function updateBanner() {
@@ -142,16 +149,14 @@ function showAlert(alert) {
   banner.classList.remove('severe', 'caution', 'expanded');
   banner.classList.add(alert.event === 'Extreme Heat Warning' ? 'severe' : 'caution');
   banner.hidden = false;
-  google.maps.event.trigger(map, 'resize');
-  map.setCenter(ABQ_CENTER);
+  nudgeMapForBanner();
 }
 
 function hideAlert() {
   const banner = document.getElementById('alert-banner');
   if (banner.hidden) return;
   banner.hidden = true;
-  google.maps.event.trigger(map, 'resize');
-  map.setCenter(ABQ_CENTER);
+  nudgeMapForBanner();
 }
 
 function loadAlerts() {
