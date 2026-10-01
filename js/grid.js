@@ -65,3 +65,35 @@ function getGridCell(lat, lng) {
     })
   })
 }
+
+// same idea as getGridCell but for hundreds/thousands of points at once (route scoring),
+// so we group by chunk first instead of letting loadChunk's own cache dedupe one at a time
+function getGridCells(points) {
+  return loadMeta().then(meta => {
+    const chunksNeeded = new Map()
+
+    const located = points.map(p => {
+      const col = Math.floor((p.lng - meta.origin.lng) / meta.cell_size_deg)
+      const row = Math.floor((meta.origin.lat - p.lat) / meta.cell_size_deg)
+      if (col < 0 || col >= meta.grid_width || row < 0 || row >= meta.grid_height) return null
+
+      const chunkCol = Math.floor(col / meta.chunk_size_cells)
+      const chunkRow = Math.floor(row / meta.chunk_size_cells)
+      const key = `${chunkCol}_${chunkRow}`
+      chunksNeeded.set(key, [chunkCol, chunkRow])
+      return { key, localRow: row % meta.chunk_size_cells, localCol: col % meta.chunk_size_cells }
+    })
+
+    const keys = Array.from(chunksNeeded.keys())
+    return Promise.all(keys.map(key => loadChunk(...chunksNeeded.get(key)))).then(loadedChunks => {
+      const bytesByKey = new Map(keys.map((key, i) => [key, loadedChunks[i]]))
+
+      return located.map(loc => {
+        if (!loc) return null
+        const bytes = bytesByKey.get(loc.key)
+        if (!bytes) return null
+        return decodeCell(bytes, loc.localRow, loc.localCol, meta)
+      })
+    })
+  })
+}
