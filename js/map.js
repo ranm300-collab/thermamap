@@ -43,6 +43,7 @@ function initMap() {
     streetViewControl: false
   });
   initSearch();
+  initHeatLayer();
 }
 
 function loadMapsScript() {
