@@ -257,6 +257,40 @@ body {
   color: #7a7264;
 }
 
+#route-color-key {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.7rem;
+  color: #7a7264;
+}
+
+.route-color-key-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.route-color-key-bar {
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.route-color-key-bar.shade {
+  background: #2f6fb0;
+}
+
+.route-color-key-bar.sun {
+  background: linear-gradient(to right, #d9a443, #c66a2e, #9c2b1f);
+}
+
+#route-night-note {
+  font-size: 0.75rem;
+  color: #7a7264;
+  margin-top: 4px;
+}
+
 #route-error {
   font-size: 0.85rem;
   color: #7a7264;

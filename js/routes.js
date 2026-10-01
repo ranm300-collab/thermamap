@@ -13,8 +13,35 @@ function clearRoutePolylines() {
     lines.hit.setMap(null);
     lines.outline.setMap(null);
     lines.main.setMap(null);
+    lines.segments.forEach(seg => seg.setMap(null));
   });
   routePolylines = [];
+}
+
+function clearRouteSegments(i) {
+  const lines = routePolylines[i];
+  if (!lines) return;
+  lines.segments.forEach(seg => seg.setMap(null));
+  lines.segments = [];
+}
+
+// draws one colored polyline per run on top of the route, main line gets hidden in restyleRoutes
+function drawRouteSegments(i, runs) {
+  clearRouteSegments(i);
+  const lines = routePolylines[i];
+  if (!lines) return;
+  lines.segments = runs.map(run => {
+    const seg = new google.maps.Polyline({
+      path: run.path,
+      map: map,
+      strokeColor: HEAT_LEVEL_COLORS[run.level],
+      strokeOpacity: 0.95,
+      strokeWeight: 6,
+      zIndex: 3
+    });
+    seg.addListener('click', () => selectRoute(i));
+    return seg;
+  });
 }
 
 
@@ -42,14 +69,15 @@ function makeRouteLines(route, i) {
   });
   hit.addListener('click', () => selectRoute(i));
   main.addListener('click', () => selectRoute(i));
-  return { hit, outline, main };
+  return { hit, outline, main, segments: [] };
 }
 
 function restyleRoutes() {
   routePolylines.forEach((lines, i) => {
     if (i === selectedRouteIndex) {
       lines.outline.setOptions({ strokeOpacity: 0.9 });
-      lines.main.setOptions({ strokeColor: ROUTE_COLOR, strokeOpacity: 0.95, strokeWeight: 6, zIndex: 3 });
+      const hasSegments = lines.segments.length > 0; // segments cover the line, hide main underneath
+      lines.main.setOptions({ strokeColor: ROUTE_COLOR, strokeOpacity: hasSegments ? 0 : 0.95, strokeWeight: 6, zIndex: 3 });
     } else {
       lines.outline.setOptions({ strokeOpacity: 0 });
       lines.main.setOptions({ strokeColor: ALT_ROUTE_COLOR, strokeOpacity: 0.8, strokeWeight: 5, zIndex: 2 });
@@ -74,6 +102,7 @@ function formatDistance(meters) {
 }
 
 function renderRouteList() {
+  document.getElementById('route-color-key').hidden = !routes.length;
   const list = document.getElementById('route-list');
   list.innerHTML = '';
   routes.forEach((route, i) => {
@@ -103,6 +132,7 @@ function fitSelectedRoute() {
 
 function selectRoute(i) {
   selectedRouteIndex = i;
+  colorSelectedRoute();
   restyleRoutes();
   renderRouteList();
   fitSelectedRoute();
@@ -118,6 +148,7 @@ function loadRoutes() {
   if (!startPlace || !destPlace) return;
 
   document.getElementById('route-error').hidden = true;
+  document.getElementById('route-night-note').hidden = true;
   routeScores = [];
   coolestIndex = -1;
 

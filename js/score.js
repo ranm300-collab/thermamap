@@ -8,6 +8,19 @@ const MIN_COVERAGE = 0.5; // need data for at least half the route to trust the 
 const HEAT_FACTOR_DIVISOR = 30; // hotter than avg ground counts extra, tune later once we've walked some routes
 // TODO: shade data is baked for a july 15 sun angle, prob off by winter
 
+// first pass, these are guesses til we've actually walked some hot days
+const IN_SHADE_FRAC = 0.5 // over half shaded at a sample counts as "in shade"
+const HOT_ANOM_F = 0 // any sunny sample on hotter than avg ground bumps up from warm
+const VERY_HOT_ANOM_F = 8
+const MIN_RUN_METERS = 40 // runs shorter than this fold into the last one so the line doesn't flicker
+
+const HEAT_LEVEL_COLORS = {
+  cool: '#2f6fb0',
+  warm: '#d9a443',
+  hot: '#c66a2e',
+  'very-hot': '#9c2b1f'
+};
+
 let routeScores = [];
 let scoring = false;
 let coolestIndex = -1;
@@ -65,33 +78,44 @@ function scoreRoute(route, departureMs) {
     let validWeight = 0;
     let sunMs = 0;
     let scoreMs = 0;
+    let anyDaylight = false;
+    const sampleData = []; // kept around so the route line can be colored later w/o rescoring
 
-    for (let i = 1; i < samples.length; i++) {
+    for (let i = 0; i < samples.length; i++) {
       const cell = cells[i];
-      if (!cell || cell.anomaly === null || cell.canopy === null) continue;
-
       const fraction = samples[i].dist / totalDist;
-      const timeMs = departureMs + fraction * route.durationMillis;
-      const hour = new Date(timeMs).getHours();
-      const shadeFrac = shadeFractionFor(cell, hour);
-      if (shadeFrac === null) continue;
+      const hour = new Date(departureMs + fraction * route.durationMillis).getHours();
+      if (hour >= SUN_UP_HOUR && hour <= SUN_DOWN_HOUR) anyDaylight = true;
+
+      let shadeFrac = null;
+      let anomaly = null;
+      if (cell && cell.anomaly !== null && cell.canopy !== null) {
+        shadeFrac = shadeFractionFor(cell, hour);
+        anomaly = cell.anomaly;
+      }
+      sampleData.push({ lat: samples[i].lat, lng: samples[i].lng, dist: samples[i].dist, shadeFrac, anomaly });
+
+      if (i === 0 || shadeFrac === null) continue;
 
       const weight = samples[i].dist - samples[i - 1].dist;
       const stepMs = (weight / totalDist) * route.durationMillis;
 
       shadeWeighted += weight * shadeFrac;
       canopyWeighted += weight * cell.canopy;
-      anomWeighted += weight * cell.anomaly;
+      anomWeighted += weight * anomaly;
       validWeight += weight;
 
       const sunFrac = 1 - shadeFrac;
       sunMs += stepMs * sunFrac;
-      const heatFactor = 1 + Math.max(0, cell.anomaly) / HEAT_FACTOR_DIVISOR;
+      const heatFactor = 1 + Math.max(0, anomaly) / HEAT_FACTOR_DIVISOR;
       scoreMs += stepMs * sunFrac * heatFactor;
     }
 
     if (validWeight === 0) {
-      return { shadePct: 0, canopyPct: 0, groundAnom: 0, sunMinutes: 0, score: Infinity, coverage: 0 };
+      return {
+        shadePct: 0, canopyPct: 0, groundAnom: 0, sunMinutes: 0, score: Infinity, coverage: 0,
+        samples: sampleData, afterDark: !anyDaylight
+      };
     }
 
     return {
@@ -100,9 +124,63 @@ function scoreRoute(route, departureMs) {
       groundAnom: anomWeighted / validWeight,
       sunMinutes: sunMs / 60000,
       score: scoreMs / 60000,
-      coverage: validWeight / totalDist
+      coverage: validWeight / totalDist,
+      samples: sampleData,
+      afterDark: !anyDaylight
     };
   });
+}
+
+function heatLevel(shadeFrac, anomaly) {
+  if (shadeFrac >= IN_SHADE_FRAC) return 'cool';
+  if (anomaly >= VERY_HOT_ANOM_F) return 'very-hot';
+  if (anomaly > HOT_ANOM_F) return 'hot';
+  return 'warm';
+}
+
+// groups samples into same-color runs, folding short blips into the run before them
+function buildRuns(samples) {
+  let lastLevel = 'cool';
+  const levels = samples.map(s => {
+    if (s.shadeFrac === null) return lastLevel; // no data here, just carry on w/ whatever we had
+    lastLevel = heatLevel(s.shadeFrac, s.anomaly);
+    return lastLevel;
+  });
+
+  const runs = [];
+  let start = 0;
+  for (let i = 1; i <= samples.length; i++) {
+    if (i === samples.length || levels[i] !== levels[start]) {
+      runs.push({ start, end: i - 1, level: levels[start] });
+      start = i;
+    }
+  }
+
+  const merged = [];
+  runs.forEach(run => {
+    const lenM = samples[run.end].dist - samples[run.start].dist;
+    if (merged.length && lenM < MIN_RUN_METERS) {
+      merged[merged.length - 1].end = run.end;
+    } else {
+      merged.push(run);
+    }
+  });
+
+  return merged.map(run => ({
+    level: run.level,
+    path: samples.slice(run.start, run.end + 1).map(s => ({ lat: s.lat, lng: s.lng }))
+  }));
+}
+
+// recolors the selected route from its stored samples, no rescoring or refetching
+function colorSelectedRoute() {
+  routes.forEach((route, i) => clearRouteSegments(i));
+
+  const s = routeScores[selectedRouteIndex];
+  document.getElementById('route-night-note').hidden = !(s && s.afterDark);
+  if (!s || !s.samples || s.afterDark) return;
+
+  drawRouteSegments(selectedRouteIndex, buildRuns(s.samples));
 }
 
 function pickCoolestRoute() {
