@@ -322,6 +322,13 @@ body {
   color: #7a7264;
 }
 
+.route-card-tip {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 #route-color-key {
   display: flex;
   gap: 12px;

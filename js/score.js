@@ -21,6 +21,11 @@ const HEAT_LEVEL_COLORS = {
   'very-hot': '#9c2b1f'
 };
 
+const BETTER_TIME_STEP_MIN = 30;
+const BETTER_TIME_WINDOW_HOURS = 4;
+const BETTER_TIME_SUN_CUT_FRAC = 0.3; // needs to cut sun by at least this fraction...
+const BETTER_TIME_MIN_SUN_CUT = 3; // ...and at least this many minutes, so tiny routes don't trigger on noise
+
 let routeScores = [];
 let routeRawData = []; // {samples, cells} per route, fetched once and reused when leave time changes
 let scoring = false;
@@ -285,6 +290,38 @@ function routeComparisonText(i) {
   }
 
   return parts.join(' · ');
+}
+
+// quietly checks a few departure times for the selected route, cached data only (no fetching).
+// only worth mentioning if it meaningfully cuts time in direct sun
+function betterLeaveTimeTip(i) {
+  if (scoring) return null;
+  const route = routes[i];
+  const raw = routeRawData[i];
+  if (!route || !raw) return null;
+
+  const baseMs = currentDepartureMs();
+  const baseScore = computeRouteScore(route, raw, baseMs);
+  if (baseScore.sunMinutes <= 0) return null;
+
+  const steps = (BETTER_TIME_WINDOW_HOURS * 60) / BETTER_TIME_STEP_MIN;
+  let best = null;
+
+  for (let step = 1; step <= steps; step++) {
+    const tryMs = baseMs + step * BETTER_TIME_STEP_MIN * 60000;
+    const tryScore = computeRouteScore(route, raw, tryMs);
+    const cut = baseScore.sunMinutes - tryScore.sunMinutes;
+    const bigEnough = cut >= BETTER_TIME_MIN_SUN_CUT && cut / baseScore.sunMinutes >= BETTER_TIME_SUN_CUT_FRAC;
+    if (bigEnough && (!best || tryScore.sunMinutes < best.sunMinutes)) {
+      best = { ms: tryMs, sunMinutes: tryScore.sunMinutes };
+    }
+  }
+  if (!best) return null;
+
+  return {
+    ms: best.ms,
+    text: `Leaving at ${formatClockTime(new Date(best.ms))} cuts direct sun to ${Math.round(best.sunMinutes)} min`
+  };
 }
 
 function logScoreTable() {

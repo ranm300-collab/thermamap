@@ -176,6 +176,20 @@ function renderRouteCards() {
       card.appendChild(compareEl);
     }
 
+    if (i === selectedRouteIndex) {
+      const tip = betterLeaveTimeTip(i);
+      if (tip) {
+        const tipEl = document.createElement('div');
+        tipEl.className = 'route-card-tip';
+        tipEl.textContent = tip.text;
+        tipEl.addEventListener('click', e => {
+          e.stopPropagation();
+          setLeaveTime(tip.ms);
+        });
+        card.appendChild(tipEl);
+      }
+    }
+
     card.addEventListener('click', () => {
       selectRouteByUser(i);
       if (!sheetExpanded) setSheetExpanded(true);
