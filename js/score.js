@@ -367,6 +367,7 @@ function scoreAllRoutes() {
       routeRawData = rawResults;
       scoring = false;
       rescoreAllFromCache();
+      findShadyDetour(); // new search only, leave time changes just rescore what we already found
     })
     .catch(err => {
       console.error('route scoring failed', err);

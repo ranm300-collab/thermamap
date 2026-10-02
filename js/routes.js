@@ -147,7 +147,7 @@ function renderRouteCards() {
 
     const label = document.createElement('div');
     label.className = 'route-card-label';
-    label.textContent = ROUTE_LABELS[i] || `Route ${i + 1}`;
+    label.textContent = route.isDetour ? 'Shady detour' : (ROUTE_LABELS[i] || `Route ${i + 1}`);
     card.appendChild(label);
 
     const main = document.createElement('div');

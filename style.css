@@ -279,6 +279,12 @@ body {
   gap: 8px;
 }
 
+#detour-status {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #7a7264;
+}
+
 .route-card {
   padding: 10px 12px;
   border-radius: 8px;
