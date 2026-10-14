@@ -11,7 +11,7 @@ const DETOUR_MAX_REQUESTS = 3; // route requests burn quota, hard cap per search
 const DETOUR_MIN_SCORE_IMPROVEMENT = 0.15; // needs to beat the best route's score by this much
 const DETOUR_MAX_OVERLAP_FRAC = 0.8; // this much overlap with an existing route = not a real option
 
-const OVERLAP_SAMPLE_STRIDE = 5; // check every 5th point instead of all of them, way cheaper
+const OVERLAP_SAMPLE_STRIDE = 5;
 const OVERLAP_DIST_M = 25; // within this = "same street" for overlap purposes
 
 let detourDebugMarkers = [];
