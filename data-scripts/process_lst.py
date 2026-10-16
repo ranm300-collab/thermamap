@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 LANDSAT_DIR = 'data/landsat'
 OUT_DIR = 'data/processed'
-BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
+BBOX = [-106.95, 34.85, -106.35, 35.40]  # west, south, east, north, wider than the map now, more scenes to work with
 TARGET_CRS = 'EPSG:32613'  # utm 13n, what most of our scenes are alredy in
 PIXEL_SIZE = 30
 ST_SCALE = 0.00341802

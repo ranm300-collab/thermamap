@@ -10,8 +10,8 @@ from rasterio.warp import transform_bounds
 
 STAC_URL = 'https://planetarycomputer.microsoft.com/api/stac/v1'
 COLLECTION = 'landsat-c2-l2'
-BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
-YEARS = [2024, 2025, 2026]
+BBOX = [-106.95, 34.85, -106.35, 35.40]  # west, south, east, north, wider than the map now, more scenes to work with
+YEARS = list(range(2019, 2027))
 PLATFORMS = ['landsat-8', 'landsat-9']  # lowercase w/ dash, not "Landsat 8"
 MAX_CLOUD = 10
 OUT_DIR = 'data/landsat'
@@ -34,7 +34,7 @@ def find_scenes(max_cloud):
         search = catalog.search(
             collections=[COLLECTION],
             bbox=BBOX,
-            datetime=f'{year}-06-01/{year}-08-31',
+            datetime=f'{year}-05-20/{year}-09-30',  # late may through sept, not just peak summer
             query={
                 'eo:cloud_cover': {'lt': max_cloud},
                 'platform': {'in': PLATFORMS}
