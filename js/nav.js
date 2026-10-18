@@ -17,9 +17,20 @@ const NAV_HEAT_WINDOW_MS = 2.5 * 60000;
 const NAV_HEAT_SHADY_FRAC = 0.7;
 const NAV_HEAT_SUNNY_FRAC = 0.3;
 
+// gps jitters a lot near buildings, so one bad fix should never be enough to trigger a reroute
+const NAV_OFF_ROUTE_M = { WALKING: 40, BICYCLING: 50 };
+const NAV_OFF_ROUTE_STREAK = 3;
+const NAV_OFF_ROUTE_MAX_ACCURACY_M = 50;
+
+const NAV_REROUTE_COOLDOWN_MS = 30000; // at most one reroute this often
+const NAV_REROUTE_MAX_PER_TRIP = 10; // the routes api has a daily quota, dont burn it chasing gps noise
+
 // dev only, lets me test the whole flow from a laptop w/o real gps. ~5x real speed
 const SIM_SPEEDS_MPS = { WALKING: 7, BICYCLING: 22.5 };
 const SIM_STEP_MS = 500;
+const NAV_SIM_DRIFT_AT_FRAC = 0.3; // drift off route around here so rerouting is easy to watch
+const NAV_SIM_DRIFT_MS = 15000;
+const NAV_SIM_DRIFT_OFFSET_M = 70; // past both off route thresholds
 
 let navActive = false;
 let navFollowing = true;
@@ -39,8 +50,21 @@ let navStepIndex = 0;
 let navArrived = false;
 let navStepsListOpen = false;
 
+let navOffRouteStreak = 0;
+let navRerouting = false;
+let navLastRerouteMs = 0;
+let navRerouteCount = 0;
+
+let navSimDist = 0;
+let navSimDriftUntilMs = null;
+let navSimDriftDone = false;
+
 function simNavOn() {
   return urlFlag('simnav');
+}
+
+function simOffOn() {
+  return urlFlag('simoff');
 }
 
 // a plain symbol path instead of an svg icon like hereIcon(), since only symbols support rotation
@@ -178,6 +202,8 @@ function formatBigDistance(meters) {
 function setupNavSteps() {
   navStepIndex = 0;
   navArrived = false;
+  navOffRouteStreak = 0;
+  navSimDist = 0; // reroutes call this too, progress-along-route restarts on the new route
   const leg = routes[selectedRouteIndex].legs && routes[selectedRouteIndex].legs[0];
   navSteps = (leg && leg.steps) || [];
 
@@ -277,6 +303,89 @@ function checkArrival(lat, lng) {
   document.getElementById('nav-instruction').hidden = false;
 }
 
+// gps jitters a lot near buildings, so one bad fix should never be enough to trigger a reroute
+function checkOffRoute(lat, lng, accuracyM, samples, idx) {
+  if (accuracyM > NAV_OFF_ROUTE_MAX_ACCURACY_M) return;
+
+  const limitM = travelMode === 'BICYCLING' ? NAV_OFF_ROUTE_M.BICYCLING : NAV_OFF_ROUTE_M.WALKING;
+  const distOffRoute = haversineMeters(lat, lng, samples[idx].lat, samples[idx].lng);
+  navOffRouteStreak = distOffRoute > limitM ? navOffRouteStreak + 1 : 0;
+
+  if (navOffRouteStreak >= NAV_OFF_ROUTE_STREAK) {
+    navOffRouteStreak = 0;
+    tryReroute(lat, lng);
+  }
+}
+
+function showRerouting() {
+  document.getElementById('nav-instruction-distance').textContent = '';
+  document.getElementById('nav-instruction-text').textContent = 'Rerouting...';
+  document.getElementById('nav-instruction-then').hidden = true;
+  document.getElementById('nav-instruction-heat').hidden = true;
+  document.getElementById('nav-instruction').hidden = false;
+}
+
+// same scoring rules as a fresh search (fetchRouteRawData/computeRouteScore/MAX_DETOUR_RATIO/
+// MIN_COVERAGE all come from score.js), just without touching the route cards ui nav hides
+async function applyReroute(newRoutes) {
+  const raws = await Promise.all(newRoutes.map(route => fetchRouteRawData(route)));
+  const departureMs = Date.now();
+  const scores = newRoutes.map((route, i) => computeRouteScore(route, raws[i], departureMs));
+
+  const fastestMs = Math.min(...newRoutes.map(r => r.durationMillis));
+  let bestIndex = 0, bestScore = Infinity;
+  scores.forEach((s, i) => {
+    if (s.coverage < MIN_COVERAGE) return;
+    if (newRoutes[i].durationMillis > fastestMs * MAX_DETOUR_RATIO) return;
+    if (s.score < bestScore) { bestScore = s.score; bestIndex = i; }
+  });
+
+  // only the winner matters once rerouted, theres no cards to let the user pick an alternative
+  routes = [newRoutes[bestIndex]];
+  routeRawData = [raws[bestIndex]];
+  routeScores = [scores[bestIndex]];
+  selectedRouteIndex = 0;
+  coolestIndex = 0;
+
+  drawRoutes();
+  setupNavSteps();
+  document.getElementById('nav-reroute-status').hidden = true;
+}
+
+async function tryReroute(lat, lng) {
+  if (navRerouting) return;
+  const now = Date.now();
+  if (now - navLastRerouteMs < NAV_REROUTE_COOLDOWN_MS) return;
+  if (navRerouteCount >= NAV_REROUTE_MAX_PER_TRIP) return;
+
+  navRerouting = true;
+  navLastRerouteMs = now;
+  navRerouteCount++;
+  document.getElementById('nav-reroute-status').hidden = true;
+  showRerouting();
+
+  try {
+    const { Route } = await google.maps.importLibrary('routes');
+    const result = await Route.computeRoutes({
+      origin: { lat, lng },
+      destination: { lat: state.dest.lat, lng: state.dest.lng },
+      travelMode: travelMode,
+      computeAlternativeRoutes: true,
+      fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels', 'legs']
+    });
+    if (!result.routes.length) throw new Error('no routes back');
+    // no shady detour search here on purpose - thats a separate computeRoutes call per
+    // candidate and we're already spending quota just getting the user back on track
+    await applyReroute(result.routes);
+  } catch (err) {
+    console.error('reroute failed', err);
+    document.getElementById('nav-reroute-status').textContent = "Couldn't reroute, keep going or end";
+    document.getElementById('nav-reroute-status').hidden = false;
+  }
+
+  navRerouting = false;
+}
+
 function renderStepsList() {
   const list = document.getElementById('nav-steps-list-items');
   list.textContent = '';
@@ -359,8 +468,12 @@ function handleNavFix(lat, lng, heading, speed, accuracyM) {
     const userDist = scored.samples[idx].dist;
     updateNavProgress(route, scored.samples, idx);
     if (!navArrived) {
-      advanceNavStep(userDist);
-      updateNavInstruction(route, scored.samples, userDist);
+      checkOffRoute(lat, lng, accuracyM, scored.samples, idx);
+      // mid-reroute the old route/steps are about to be replaced, leave the card on "Rerouting..."
+      if (!navRerouting) {
+        advanceNavStep(userDist);
+        updateNavInstruction(route, scored.samples, userDist);
+      }
     }
   }
 
@@ -400,15 +513,36 @@ function samplePointAtDist(samples, dist) {
   return samples[samples.length - 1];
 }
 
+// ?simoff=1 dev tool: steps off to the side of the route for a bit so rerouting is easy to
+// watch. offsetPoint is the same great circle offset detours.js already uses for candidates
+function simDriftPoint(samples, dist) {
+  const base = samplePointAtDist(samples, dist) || samples[samples.length - 1];
+  const ahead = samplePointAtDist(samples, dist + 10) || base;
+  const bearing = bearingBetween(base.lat, base.lng, ahead.lat, ahead.lng);
+  return offsetPoint(base.lat, base.lng, bearing + 90, NAV_SIM_DRIFT_OFFSET_M);
+}
+
 // dev tool only (?simnav=1) - fakes movement along the route on a timer so this can be
 // tested from a laptop. real navigation never uses a timer, watchPosition drives it instead
 function startSimNav() {
-  const samples = routeScores[selectedRouteIndex].samples;
   const speed = SIM_SPEEDS_MPS[travelMode] || SIM_SPEEDS_MPS.WALKING;
-  let simDist = 0;
   navSimTimer = setInterval(() => {
-    simDist += speed * (SIM_STEP_MS / 1000);
-    const point = samplePointAtDist(samples, simDist);
+    navSimDist += speed * (SIM_STEP_MS / 1000);
+    const samples = routeScores[selectedRouteIndex].samples; // read fresh, picks up reroutes too
+
+    if (simOffOn() && !navSimDriftDone && navSimDriftUntilMs === null) {
+      const totalDist = samples[samples.length - 1].dist;
+      if (navSimDist >= totalDist * NAV_SIM_DRIFT_AT_FRAC) navSimDriftUntilMs = Date.now() + NAV_SIM_DRIFT_MS;
+    }
+
+    let point;
+    if (navSimDriftUntilMs !== null && Date.now() < navSimDriftUntilMs) {
+      point = simDriftPoint(samples, navSimDist);
+    } else {
+      if (navSimDriftUntilMs !== null) { navSimDriftUntilMs = null; navSimDriftDone = true; }
+      point = samplePointAtDist(samples, navSimDist);
+    }
+
     if (!point) {
       clearInterval(navSimTimer);
       navSimTimer = null;
@@ -459,6 +593,11 @@ async function startNav() {
   navFollowing = true;
   navLastFix = null;
   navLastHeading = 0;
+  navRerouting = false;
+  navLastRerouteMs = 0;
+  navRerouteCount = 0;
+  navSimDriftUntilMs = null;
+  navSimDriftDone = false;
 
   map.setZoom(NAV_ZOOM[travelMode] || NAV_ZOOM.WALKING);
   // map stays north up for now - rotating it to match heading needs a vector map id,
@@ -493,6 +632,7 @@ function endNav() {
   if (navDragListener) { navDragListener.remove(); navDragListener = null; }
 
   document.getElementById('nav-bar').hidden = true;
+  document.getElementById('nav-reroute-status').hidden = true;
   document.getElementById('nav-recenter-btn').hidden = true;
   document.getElementById('nav-location-error').hidden = true;
   document.getElementById('nav-instruction').hidden = true;
