@@ -47,14 +47,17 @@ function updateLegendVisibility() {
 
 function clearBandTags() {
   for (let i = 0; i < HEAT_BAND_NAMES.length; i++) {
-    document.querySelector(`#heat-band-${i} .heat-band-tags`).textContent = '';
+    document.querySelector(`#heat-band-${i} .heat-band-markers`).textContent = '';
   }
 }
 
-// sticks a "Start"/"Dest" tag on whichever band row the place falls into
-function tagBand(i, text) {
-  const tagsEl = document.querySelector(`#heat-band-${i} .heat-band-tags`);
-  tagsEl.textContent = tagsEl.textContent ? `${tagsEl.textContent}, ${text}` : text;
+// little "Start -4°" label above whichever band row it falls into
+function tagBand(i, label, anomaly) {
+  const markers = document.querySelector(`#heat-band-${i} .heat-band-markers`);
+  const el = document.createElement('span');
+  el.className = 'heat-band-marker';
+  el.textContent = `${label} ${anomaly >= 0 ? '+' : ''}${Math.round(anomaly)}°`;
+  markers.appendChild(el);
 }
 
 async function positionMarker(label, nodataId, place) {
@@ -71,7 +74,7 @@ async function positionMarker(label, nodataId, place) {
     return;
   }
   nodataEl.hidden = true;
-  tagBand(bandIndexFor(cell.anomaly), label);
+  tagBand(bandIndexFor(cell.anomaly), label, cell.anomaly);
 }
 
 function updateHeatMarkers() {
