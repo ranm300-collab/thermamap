@@ -230,8 +230,8 @@ function setRouteError(msg) {
   el.hidden = false;
 }
 
-function loadRoutes() {
-  if (!startPlace || !destPlace) return;
+async function loadRoutes() {
+  if (!state.start || !state.dest) return;
 
   document.getElementById('route-error').hidden = true;
   routeScores = [];
@@ -240,37 +240,34 @@ function loadRoutes() {
   sheetExpanded = false;
   document.getElementById('route-cards-panel').classList.remove('expanded');
 
-  google.maps.importLibrary('routes')
-    .then(({ Route }) => {
-      const request = {
-        origin: { lat: startPlace.lat, lng: startPlace.lng },
-        destination: { lat: destPlace.lat, lng: destPlace.lng },
-        travelMode: travelMode,
-        computeAlternativeRoutes: true,
-        fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels']
-      };
-      return Route.computeRoutes(request);
-    })
-    .then(result => {
-      if (!result.routes.length) {
-        clearRoutePolylines();
-        routes = [];
-        document.getElementById('route-cards').innerHTML = '';
-        document.getElementById('route-cards-panel').hidden = true;
-        setRouteError(travelMode === 'BICYCLING' ? "No bike route for this one, try walking" : "No route found for this one");
-        return;
-      }
-      routes = result.routes;
-      selectedRouteIndex = 0;
-      drawRoutes();
-      renderRouteCards();
-      fitSelectedRoute();
-      scoreAllRoutes();
-    })
-    .catch(err => {
-      console.error('routes request failed', err);
-      setRouteError("Couldn't get routes, try again");
+  try {
+    const { Route } = await google.maps.importLibrary('routes');
+    const result = await Route.computeRoutes({
+      origin: { lat: state.start.lat, lng: state.start.lng },
+      destination: { lat: state.dest.lat, lng: state.dest.lng },
+      travelMode: travelMode,
+      computeAlternativeRoutes: true,
+      fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels']
     });
+
+    if (!result.routes.length) {
+      clearRoutePolylines();
+      routes = [];
+      document.getElementById('route-cards').innerHTML = '';
+      document.getElementById('route-cards-panel').hidden = true;
+      setRouteError(travelMode === 'BICYCLING' ? "No bike route for this one, try walking" : "No route found for this one");
+      return;
+    }
+    routes = result.routes;
+    selectedRouteIndex = 0;
+    drawRoutes();
+    renderRouteCards();
+    fitSelectedRoute();
+    scoreAllRoutes();
+  } catch (err) {
+    console.error('routes request failed', err);
+    setRouteError("Couldn't get routes, try again");
+  }
 }
 
 function setMode(mode) {

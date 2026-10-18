@@ -166,29 +166,28 @@ function drawDebugMarkers(candidates, keptSet) {
   });
 }
 
-function requestDetourRoute(candidate) {
-  return google.maps.importLibrary('routes').then(({ Route }) => Route.computeRoutes({
-    origin: { lat: startPlace.lat, lng: startPlace.lng },
-    destination: { lat: destPlace.lat, lng: destPlace.lng },
+async function requestDetourRoute(candidate) {
+  const { Route } = await google.maps.importLibrary('routes');
+  return Route.computeRoutes({
+    origin: { lat: state.start.lat, lng: state.start.lng },
+    destination: { lat: state.dest.lat, lng: state.dest.lng },
     travelMode: travelMode,
     intermediates: [{ location: { lat: candidate.lat, lng: candidate.lng }, via: true }],
     fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels']
-  }));
+  });
 }
 
-function requestAndScoreDetour(candidate) {
-  return requestDetourRoute(candidate)
-    .then(result => {
-      const route = result.routes && result.routes[0];
-      if (!route) return null;
-      return fetchRouteRawData(route).then(raw => ({
-        route, raw, score: computeRouteScore(route, raw, currentDepartureMs())
-      }));
-    })
-    .catch(err => {
-      console.error('detour route request failed', err);
-      return null;
-    });
+async function requestAndScoreDetour(candidate) {
+  try {
+    const result = await requestDetourRoute(candidate);
+    const route = result.routes && result.routes[0];
+    if (!route) return null;
+    const raw = await fetchRouteRawData(route);
+    return { route, raw, score: computeRouteScore(route, raw, currentDepartureMs()) };
+  } catch (err) {
+    console.error('detour route request failed', err);
+    return null;
+  }
 }
 
 // rough but cheap: strides through both paths instead of comparing every single point
@@ -230,10 +229,10 @@ function addDetourRoute(best) {
   pickCoolestRoute();
 }
 
-function findShadyDetour() {
+async function findShadyDetour() {
   clearDetourMarkers();
   hideDetourStatus();
-  if (!startPlace || !destPlace) return;
+  if (!state.start || !state.dest) return;
 
   const fastestIdx = fastestRouteIndex();
   const fastestRoute = routes[fastestIdx];
@@ -246,34 +245,31 @@ function findShadyDetour() {
 
   showDetourStatus();
 
-  getGridCells(allPoints).then(cellsFlat => {
-    let idx = 0;
-    candidates.forEach(c => {
-      c.cells = c.areaPoints.map(() => cellsFlat[idx++]);
-      evaluateCandidate(c, fastestRoute);
-    });
-
-    const kept = pickBestCandidates(candidates);
-    const keptSet = new Set(kept);
-
-    if (debugDetoursOn()) {
-      logCandidates(candidates, keptSet);
-      drawDebugMarkers(candidates, keptSet);
-    }
-
-    if (!kept.length) {
-      hideDetourStatus();
-      return;
-    }
-
-    const bestExistingScore = Math.min(...routeScores.map(s => s.score));
-    const existingRaws = routeRawData.slice();
-
-    Promise.all(kept.slice(0, DETOUR_MAX_REQUESTS).map(requestAndScoreDetour))
-      .then(results => {
-        hideDetourStatus();
-        const best = pickBestDetour(results, fastestRoute.durationMillis, bestExistingScore, existingRaws);
-        if (best) addDetourRoute(best);
-      });
+  const cellsFlat = await getGridCells(allPoints);
+  let idx = 0;
+  candidates.forEach(c => {
+    c.cells = c.areaPoints.map(() => cellsFlat[idx++]);
+    evaluateCandidate(c, fastestRoute);
   });
+
+  const kept = pickBestCandidates(candidates);
+  const keptSet = new Set(kept);
+
+  if (debugDetoursOn()) {
+    logCandidates(candidates, keptSet);
+    drawDebugMarkers(candidates, keptSet);
+  }
+
+  if (!kept.length) {
+    hideDetourStatus();
+    return;
+  }
+
+  const bestExistingScore = Math.min(...routeScores.map(s => s.score));
+  const existingRaws = routeRawData.slice();
+
+  const results = await Promise.all(kept.slice(0, DETOUR_MAX_REQUESTS).map(requestAndScoreDetour));
+  hideDetourStatus();
+  const best = pickBestDetour(results, fastestRoute.durationMillis, bestExistingScore, existingRaws);
+  if (best) addDetourRoute(best);
 }

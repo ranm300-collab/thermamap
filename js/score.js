@@ -85,10 +85,11 @@ function shadeFractionFor(cell, date) {
 
 // the expensive part: sample the path and fetch grid chunks. done once per route,
 // reused for every rescore (leave time changes, the "now" refresh, the better-time check)
-function fetchRouteRawData(route) {
+async function fetchRouteRawData(route) {
   const samples = sampleRoute(route.path, SAMPLE_SPACING_M);
   const points = samples.map(s => ({ lat: s.lat, lng: s.lng }));
-  return getGridCells(points).then(cells => ({ samples, cells }));
+  const cells = await getGridCells(points);
+  return { samples, cells };
 }
 
 // the cheap part: turn already-fetched samples/cells into a score for one departure time
@@ -156,7 +157,7 @@ function computeRouteScore(route, raw, departureMs) {
 }
 
 function currentDepartureMs() {
-  return leaveTimeMs === null ? Date.now() : leaveTimeMs;
+  return state.leaveTimeMs === null ? Date.now() : state.leaveTimeMs;
 }
 
 function heatLevel(shadeFrac, anomaly) {
@@ -355,30 +356,28 @@ function rescoreAllFromCache() {
   if (debugScoreOn()) logScoreTable();
 }
 
-function scoreAllRoutes() {
+async function scoreAllRoutes() {
   if (!routes.length) return;
   scoring = true;
   coolestIndex = -1;
   routeRawData = [];
   renderRouteCards();
 
-  Promise.all(routes.map(route => fetchRouteRawData(route)))
-    .then(rawResults => {
-      routeRawData = rawResults;
-      scoring = false;
-      rescoreAllFromCache();
-      findShadyDetour(); // new search only, leave time changes just rescore what we already found
-    })
-    .catch(err => {
-      console.error('route scoring failed', err);
-      scoring = false;
-      renderRouteCards();
-    });
+  try {
+    routeRawData = await Promise.all(routes.map(route => fetchRouteRawData(route)));
+    scoring = false;
+    rescoreAllFromCache();
+    findShadyDetour(); // new search only, leave time changes just rescore what we already found
+  } catch (err) {
+    console.error('route scoring failed', err);
+    scoring = false;
+    renderRouteCards();
+  }
 }
 
 // keeps the "now" numbers honest as the clock moves, only matters when not following a picked time
 function rescoreIfFollowingNow() {
-  if (leaveTimeMs !== null || scoring) return;
+  if (state.leaveTimeMs !== null || scoring) return;
   rescoreAllFromCache();
 }
 

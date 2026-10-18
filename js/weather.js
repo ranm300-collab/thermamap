@@ -1,62 +1,49 @@
 const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
 
-let lastReadingTime = null;
-let lastFeelsLike = null;
-let lastUV = null;
-
 function updateFreshnessText() {
   const el = document.getElementById('wx-time');
-  if (!lastReadingTime) return;
-  const mins = Math.round((Date.now() - lastReadingTime) / 60000);
+  if (!state.weather.readingTime) return;
+  const mins = Math.round((Date.now() - state.weather.readingTime) / 60000);
   const text = mins < 1 ? 'just now' : mins === 1 ? '1 min ago' : `${mins} min ago`;
   el.textContent = 'as of ' + text;
 }
 
-function loadFromNWS() {
+async function loadFromNWS() {
   // google down, fall back to nws
-  fetch('https://api.weather.gov/stations/KABQ/observations/latest')
-    .then(res => {
-      if (!res.ok) throw new Error('nws bad status');
-      return res.json();
-    })
-    .then(data => {
-      const c = data.properties.temperature.value;
-      if (c === null) throw new Error('nws temp null');
-      const f = c * 9 / 5 + 32;
-      document.getElementById('temp-now').textContent = Math.round(f) + '°F';
-      document.getElementById('temp-detail').textContent = '';
-      lastFeelsLike = f;
-      lastUV = null;
-      lastReadingTime = new Date(data.properties.timestamp);
-      updateFreshnessText();
-    })
-    .catch(err => console.error('nws fallback failed', err));
+  try {
+    const data = await fetchJson('https://api.weather.gov/stations/KABQ/observations/latest', 'nws');
+    const c = data.properties.temperature.value;
+    if (c === null) throw new Error('nws temp null');
+    const f = c * 9 / 5 + 32;
+    document.getElementById('temp-now').textContent = Math.round(f) + '°F';
+    document.getElementById('temp-detail').textContent = '';
+    state.weather.feelsLike = f;
+    state.weather.uv = null;
+    state.weather.readingTime = new Date(data.properties.timestamp);
+    updateFreshnessText();
+  } catch (err) {
+    console.error('nws fallback failed', err);
+  }
 }
 
-function loadWeather() {
-  let retries = 0
+async function loadWeather() {
   const url = `https://weather.googleapis.com/v1/currentConditions:lookup?key=${GOOGLE_MAPS_KEY}&location.latitude=${WX_COORDS.lat}&location.longitude=${WX_COORDS.lng}&unitsSystem=IMPERIAL`;
 
-  fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error('bad status');
-      return res.json();
-    })
-    .then(data => {
-      const f = data.temperature.degrees;
-      const feels = data.feelsLikeTemperature.degrees;
-      const uv = data.uvIndex;
-      document.getElementById('temp-now').textContent = Math.round(f) + '°F';
-      document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
-      lastFeelsLike = feels;
-      lastUV = uv;
-      lastReadingTime = new Date(data.currentTime);
-      updateFreshnessText();
-    })
-    .catch(err => {
-      console.error('google wx failed', err);
-      loadFromNWS();
-    });
+  try {
+    const data = await fetchJson(url, 'google wx');
+    const f = data.temperature.degrees;
+    const feels = data.feelsLikeTemperature.degrees;
+    const uv = data.uvIndex;
+    document.getElementById('temp-now').textContent = Math.round(f) + '°F';
+    document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
+    state.weather.feelsLike = feels;
+    state.weather.uv = uv;
+    state.weather.readingTime = new Date(data.currentTime);
+    updateFreshnessText();
+  } catch (err) {
+    console.error('google wx failed', err);
+    loadFromNWS();
+  }
 }
 
 const ALERT_URL = 'https://api.weather.gov/alerts/active?point=35.0844,-106.6504';
@@ -102,14 +89,14 @@ function getHeatLabel(feels) {
 }
 
 function getEffectiveFeelsLike() {
-  const fake = new URLSearchParams(location.search).get('fakeheat');
+  const fake = urlParam('fakeheat');
   if (fake !== null) return Number(fake);
-  return lastFeelsLike;
+  return state.weather.feelsLike;
 }
 
 function buildHeatTips() {
   const tips = HEAT_TIPS.slice();
-  if (lastUV !== null && lastUV >= 8) tips.push('uv is brutal today too, shade matters more than usual');
+  if (state.weather.uv !== null && state.weather.uv >= 8) tips.push('uv is brutal today too, shade matters more than usual');
   return tips.join('\n');
 }
 
@@ -159,22 +146,19 @@ function hideAlert() {
   nudgeMapForBanner();
 }
 
-function loadAlerts() {
-  if (new URLSearchParams(location.search).get('fakealert') === '1') {
+async function loadAlerts() {
+  if (urlFlag('fakealert')) {
     lastAlertData = FAKE_ALERT;
     updateBanner();
     return;
   }
-  fetch(ALERT_URL)
-    .then(res => {
-      if (!res.ok) throw new Error('alerts bad status');
-      return res.json();
-    })
-    .then(data => {
-      lastAlertData = pickWorstAlert(data.features);
-      updateBanner();
-    })
-    .catch(err => console.error('alerts fetch failed', err));
+  try {
+    const data = await fetchJson(ALERT_URL, 'alerts');
+    lastAlertData = pickWorstAlert(data.features);
+    updateBanner();
+  } catch (err) {
+    console.error('alerts fetch failed', err);
+  }
 }
 
 document.getElementById('alert-banner').addEventListener('click', () => {
