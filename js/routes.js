@@ -193,6 +193,16 @@ function renderRouteCards() {
         });
         card.appendChild(tipEl);
       }
+
+      const startBtn = document.createElement('button');
+      startBtn.type = 'button';
+      startBtn.className = 'route-card-start-btn';
+      startBtn.textContent = 'Start';
+      startBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        startNav();
+      });
+      card.appendChild(startBtn);
     }
 
     card.addEventListener('click', () => {
