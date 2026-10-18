@@ -277,9 +277,10 @@ function endNav() {
   document.getElementById('nav-recenter-btn').hidden = true;
   document.getElementById('nav-location-error').hidden = true;
   document.getElementById('search-card').hidden = false;
-  document.getElementById('route-cards-panel').hidden = !routes.length;
 
-  colorSelectedRoute(); // back to the normal full-route heat coloring
+  // navActive is already false above, so this rescore redraws the normal full-route
+  // coloring and refreshes the cards/panel itself, no need to touch them separately here
+  rescoreAllFromCache();
 }
 
 document.getElementById('nav-end-btn').addEventListener('click', endNav);

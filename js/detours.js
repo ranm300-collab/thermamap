@@ -230,6 +230,7 @@ function addDetourRoute(best) {
 }
 
 async function findShadyDetour() {
+  if (navActive) return; // only ever runs from a fresh search anyway, but just in case
   clearDetourMarkers();
   hideDetourStatus();
   if (!state.start || !state.dest) return;

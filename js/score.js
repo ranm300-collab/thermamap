@@ -201,8 +201,10 @@ function buildRuns(samples) {
   }));
 }
 
-// recolors the selected route from its stored samples, no rescoring or refetching
+// recolors the selected route from its stored samples, no rescoring or refetching.
+// nav.js owns the route coloring once navigating (walked vs remaining), so stay out of its way
 function colorSelectedRoute() {
+  if (navActive) return;
   routes.forEach((route, i) => clearRouteSegments(i));
 
   const s = routeScores[selectedRouteIndex];
@@ -375,9 +377,10 @@ async function scoreAllRoutes() {
   }
 }
 
-// keeps the "now" numbers honest as the clock moves, only matters when not following a picked time
+// keeps the "now" numbers honest as the clock moves, only matters when not following a picked time.
+// skips during nav too - nav.js has its own progress math and this would fight its route coloring
 function rescoreIfFollowingNow() {
-  if (state.leaveTimeMs !== null || scoring) return;
+  if (state.leaveTimeMs !== null || scoring || navActive) return;
   rescoreAllFromCache();
 }
 
