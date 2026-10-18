@@ -61,6 +61,61 @@ body {
   color: #a39c8c;
 }
 
+/* during nav the instruction card needs the room, drop down to just the temp */
+#top-bar.nav-compact {
+  padding: calc(env(safe-area-inset-top) + 6px) 16px 6px;
+}
+
+#top-bar.nav-compact #temp-detail,
+#top-bar.nav-compact #wx-time {
+  display: none;
+}
+
+#nav-instruction {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid #ddd0bc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+}
+
+#nav-instruction-arrow {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+
+#nav-instruction-arrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+#nav-instruction-distance {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+#nav-instruction-text {
+  font-size: 0.95rem;
+}
+
+#nav-instruction-then {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #7a7264;
+}
+
+#nav-instruction-heat {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: #7a7264;
+}
+
 #map {
   flex: 1;
 }
@@ -589,4 +644,65 @@ body {
   background: var(--accent);
   color: #fdf6ee;
   font-size: 0.85rem;
+}
+
+#nav-steps-list {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  background: var(--bg);
+  padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 10px);
+  overflow-y: auto;
+}
+
+#nav-steps-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+#nav-steps-list-close {
+  border: none;
+  background: none;
+  color: #7a7264;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 4px;
+}
+
+.nav-steps-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd0bc;
+}
+
+.nav-steps-list-arrow {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+}
+
+.nav-steps-list-arrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+.nav-steps-list-text {
+  flex: 1 1 auto;
+  font-size: 0.9rem;
+}
+
+.nav-steps-list-dist {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  color: #7a7264;
 }

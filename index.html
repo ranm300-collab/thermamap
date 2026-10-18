@@ -20,6 +20,15 @@
   <div id="alert-headline"></div>
   <div id="alert-instruction"></div>
 </div>
+<div id="nav-instruction" hidden>
+  <div id="nav-instruction-arrow"></div>
+  <div id="nav-instruction-body">
+    <div id="nav-instruction-distance"></div>
+    <div id="nav-instruction-text"></div>
+    <div id="nav-instruction-then" hidden></div>
+    <div id="nav-instruction-heat" hidden></div>
+  </div>
+</div>
 <div id="map"></div>
 
 <button id="heat-toggle" type="button">Heat</button>
@@ -106,6 +115,13 @@
 <div id="nav-bar" hidden>
   <div id="nav-progress"></div>
   <button type="button" id="nav-end-btn">End</button>
+</div>
+<div id="nav-steps-list" hidden>
+  <div id="nav-steps-list-header">
+    <span>Remaining steps</span>
+    <button type="button" id="nav-steps-list-close">×</button>
+  </div>
+  <div id="nav-steps-list-items"></div>
 </div>
 
 <script src="js/state.js" defer></script>
