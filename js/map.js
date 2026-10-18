@@ -16,12 +16,12 @@ const MAP_STYLE = [
   { featureType: 'administrative.locality', elementType: 'labels', stylers: [{ visibility: 'on' }] }
 ];
 
-// zoom + bounds, was hitting blank map patches
+// inset from the actual heat data extent so thers always real (faded) data past the hard edge
 const METRO_BOUNDS = {
-  north: 35.3,
-  south: 34.9,
-  east: -106.45,
-  west: -106.85,
+  north: 35.35,
+  south: 34.90,
+  east: -106.40,
+  west: -106.90,
 };
 
 let map
@@ -30,12 +30,12 @@ function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: ABQ_CENTER,
     zoom: 13,
-    // 10 was too far out, city label drops off right at that zoom
-    minZoom: 11,
+    // zoomed out past this, a laptop-width window would show past where heat data exists
+    minZoom: 12,
     maxZoom: 19,
     restriction: {
       latLngBounds: METRO_BOUNDS,
-      strictBounds: false
+      strictBounds: true
     },
     backgroundColor: '#e8e0d0',
     styles: MAP_STYLE,
