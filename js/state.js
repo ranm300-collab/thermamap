@@ -2,8 +2,6 @@
 const state = {
   start: null,
   dest: null,
-  routes: [],
-  selectedRouteIndex: 0,
   leaveTimeMs: null,
   weather: {
     feelsLike: null,
