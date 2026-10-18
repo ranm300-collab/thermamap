@@ -9,6 +9,7 @@ from rasterio.transform import from_origin, rowcol
 import matplotlib.pyplot as plt
 
 LANDSAT_DIR = 'data/landsat'
+SHARP_DIR = 'data/landsat/sharp'
 OUT_DIR = 'data/processed'
 BBOX = [-106.95, 34.85, -106.35, 35.40]  # west, south, east, north, wider than the map now, more scenes to work with
 TARGET_CRS = 'EPSG:32613'  # utm 13n, what most of our scenes are alredy in
@@ -85,6 +86,23 @@ def load_scene_fahrenheit(st_path, qa_path, grid_transform, width, height):
 
     return fahrenheit
 
+def load_sharpened_fahrenheit(sharp_path, grid_transform, width, height):
+    with rasterio.open(sharp_path) as src:
+        fahrenheit = np.zeros((height, width), dtype='float32')
+        reproject(
+            source=rasterio.band(src, 1),
+            destination=fahrenheit,
+            src_transform=src.transform,
+            src_crs=src.crs,
+            src_nodata=src.nodata,
+            dst_transform=grid_transform,
+            dst_crs=TARGET_CRS,
+            dst_nodata=np.nan,
+            resampling=Resampling.bilinear
+        )
+    fahrenheit[(fahrenheit < 40) | (fahrenheit > 180)] = np.nan
+    return fahrenheit
+
 def write_geotiff(path, array, grid_transform):
     profile = {
         'driver': 'GTiff',
@@ -131,9 +149,16 @@ if __name__ == '__main__':
     print(f'found {len(pairs)} scene pairs to process')
 
     stack = np.full((len(pairs), height, width), np.nan, dtype='float32')
+    sharp_used = 0
     for i, (name, st_path, qa_path) in enumerate(pairs):
         print(f'processing {name} ({i + 1}/{len(pairs)})...')
-        stack[i] = load_scene_fahrenheit(st_path, qa_path, grid_transform, width, height)
+        sharp_path = f'{SHARP_DIR}/{name}_lst_sharp.tif'
+        if os.path.exists(sharp_path):
+            stack[i] = load_sharpened_fahrenheit(sharp_path, grid_transform, width, height)
+            sharp_used += 1
+        else:
+            # sharpen_lst never touched this one, prob missing an sr band, fall back to plain
+            stack[i] = load_scene_fahrenheit(st_path, qa_path, grid_transform, width, height)
 
     print('combining scenes...')
     valid_count = np.sum(~np.isnan(stack), axis=0).astype('float32')
@@ -150,7 +175,7 @@ if __name__ == '__main__':
     save_preview(anomaly, f'{OUT_DIR}/abq_lst_preview.png')
 
     print()
-    print(f'{len(pairs)} scenes used')
+    print(f'{len(pairs)} scenes used, {sharp_used} from sharpened data, {len(pairs) - sharp_used} plain fallback')
     print(f'citywide median: {citywide_median:.1f}f')
     print(f'5th percentile: {np.nanpercentile(median_f, 5):.1f}f')
     print(f'95th percentile: {np.nanpercentile(median_f, 95):.1f}f')

@@ -16,6 +16,9 @@ PLATFORMS = ['landsat-8', 'landsat-9']  # lowercase w/ dash, not "Landsat 8"
 MAX_CLOUD = 10
 OUT_DIR = 'data/landsat'
 
+# sr_b2, sr_b4, sr_b5, sr_b6, sr_b7 for sharpening, pc's asset keys are the common names not the band numbers
+SR_BANDS = {'blue': 'sr_b2', 'red': 'sr_b4', 'nir08': 'sr_b5', 'swir16': 'sr_b6', 'swir22': 'sr_b7'}
+
 
 def covers_bbox(item):
     ib = item.bbox
@@ -40,7 +43,17 @@ def find_scenes(max_cloud):
                 'platform': {'in': PLATFORMS}
             }
         )
-        for item in search.items():
+        # pc's connection resets mid-page sometimes, not just on band reads
+        for attempt in range(3):
+            try:
+                year_items = list(search.items())
+                break
+            except pystac_client.exceptions.APIError:
+                if attempt == 2:
+                    raise
+                print(f'  {year} search hiccuped, retrying ({attempt + 1}/3)...')
+                time.sleep(3)
+        for item in year_items:
             if covers_bbox(item):
                 items.append(item)
     return items
@@ -51,18 +64,28 @@ def download_band(item, asset_key, out_path):
         print(f'  {out_path} already there, skipping')
         return
     href = item.assets[asset_key].href
-    with rasterio.open(href) as src:
-        left, bottom, right, top = transform_bounds('EPSG:4326', src.crs, *BBOX)
-        window = from_bounds(left, bottom, right, top, src.transform)
-        data = src.read(1, window=window)
-        profile = src.profile.copy()
-        profile.update(
-            height=data.shape[0],
-            width=data.shape[1],
-            transform=src.window_transform(window)
-        )
-        with rasterio.open(out_path, 'w', **profile) as dst:
-            dst.write(data, 1)
+    # 3 retries wasn't enough, gdal's own curl driver needed a nudge to retry too
+    for attempt in range(5):
+        try:
+            with rasterio.Env(GDAL_HTTP_MAX_RETRY=3, GDAL_HTTP_RETRY_DELAY=2):
+                with rasterio.open(href) as src:
+                    left, bottom, right, top = transform_bounds('EPSG:4326', src.crs, *BBOX)
+                    window = from_bounds(left, bottom, right, top, src.transform)
+                    data = src.read(1, window=window)
+                    profile = src.profile.copy()
+                    profile.update(
+                        height=data.shape[0],
+                        width=data.shape[1],
+                        transform=src.window_transform(window)
+                    )
+            with rasterio.open(out_path, 'w', **profile) as dst:
+                dst.write(data, 1)
+            return
+        except rasterio.errors.RasterioIOError:
+            if attempt == 4:
+                raise
+            print(f'  tile read failed, retrying ({attempt + 1}/5)...')
+            time.sleep(5)
 
 def fetch_all(max_cloud):
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -73,9 +96,14 @@ def fetch_all(max_cloud):
     for item in items:
         name = scene_name(item)
         print(f'downloading {name}...')
-        # lwir11 is the actual asset key, ST_B10 is just the band's title/description
-        download_band(item, 'lwir11', f'{OUT_DIR}/{name}_st.tif')
-        download_band(item, 'qa_pixel', f'{OUT_DIR}/{name}_qa.tif')
+        # lwir11 is the real asset key, ST_B10 is just the title. asset_key -> filename suffix
+        all_bands = [('lwir11', 'st'), ('qa_pixel', 'qa')] + list(SR_BANDS.items())
+        for asset_key, suffix in all_bands:
+            try:
+                download_band(item, asset_key, f'{OUT_DIR}/{name}_{suffix}.tif')
+            except rasterio.errors.RasterioIOError:
+                # happens now and then even after retries, sharpen_lst/process_lst both cope with a missing band
+                print(f'  giving up on {name}_{suffix}.tif for now, moving on')
 
     return items
 
