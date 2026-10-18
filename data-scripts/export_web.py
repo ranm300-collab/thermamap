@@ -9,15 +9,17 @@
 #   see meta.json for origin/cell size/chunk size
 
 import os
+import shutil
 import gzip
 import numpy as np
 import mercantile
 from PIL import Image
 import rasterio
 from rasterio.transform import from_origin, rowcol
-from rasterio.warp import reproject, transform as transform_coords, Resampling
+from rasterio.warp import reproject, transform as transform_coords, transform_bounds, Resampling
 
-BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
+# wider than the map's restriction bounds (js/map.js METRO_BOUNDS) so theres margin to fade into
+BBOX = [-106.94, 34.86, -106.36, 35.39]
 
 CANOPY_PATH = 'data/processed/abq_canopy_pct_5m.tif'
 ANOM_PATH = 'data/processed/abq_lst_anom.tif'
@@ -28,38 +30,66 @@ WEB_DIR = 'webdata'
 HEAT_DIR = f'{WEB_DIR}/heat'
 GRID_DIR = f'{WEB_DIR}/grid'
 
-HEAT_ZOOMS = range(10, 16)
-HEAT_CLAMP_F = 15.0
-COOL_RGB = (47, 111, 176)
-NEUTRAL_RGB = (244, 237, 224)
-HOT_RGB = (196, 60, 30)
+HEAT_ZOOMS = range(12, 16)  # matches map.js minZoom, no point generating tiles nobody can reach
+HEAT_PALETTE_COLORS = 48  # just the 5 bands + their blend zones, compresses way better than a gradient
+FADE_METERS = 3000  # soft edge over this distance, no hard rectangle when panned near the data edge
+
+# much cooler / cooler / typical / hotter / much hotter, picked by eye to be clearly distinct
+BAND_COLORS = [
+    (34, 86, 143),
+    (122, 165, 196),
+    (224, 214, 196),
+    (214, 134, 68),
+    (156, 43, 31),
+]
+BAND_THRESHOLDS = [-6, -2, 2, 6]  # upper edge of bands 0-3, matches js/heatlayer.js
+BAND_SMOOTH_F = 1.0  # blend this many degrees around each cutoff, keeps bands from looking blocky
 
 CELL_DEG = 0.0001  # about 10m at abq's latitude
 CHUNK_CELLS = 100  # 100 cells * 0.0001deg = 0.01deg per chunk
 BYTES_PER_CELL = 1 + len(HOURS) + 1
 
-def anomaly_to_rgba(anom, valid):
-    clamped = np.clip(np.nan_to_num(anom, nan=0.0), -HEAT_CLAMP_F, HEAT_CLAMP_F)
-    t = (clamped + HEAT_CLAMP_F) / (2 * HEAT_CLAMP_F)
-    t3 = t[..., None]
-    cool = np.array(COOL_RGB, dtype='float32')
-    neutral = np.array(NEUTRAL_RGB, dtype='float32')
-    hot = np.array(HOT_RGB, dtype='float32')
-    lower = cool * (1 - 2 * t3) + neutral * (2 * t3)
-    upper = neutral * (1 - 2 * (t3 - 0.5)) + hot * (2 * (t3 - 0.5))
-    rgb = np.where(t3 < 0.5, lower, upper)
+def anomaly_to_rgba(anom, valid, fade):
+    colors = np.array(BAND_COLORS, dtype='float32')
+    a = np.nan_to_num(anom, nan=0.0)
+    band_idx = np.clip(np.searchsorted(BAND_THRESHOLDS, a), 0, len(colors) - 1)
+    rgb = colors[band_idx].copy()
+
+    for i, t in enumerate(BAND_THRESHOLDS):
+        dist = a - t
+        in_zone = np.abs(dist) < BAND_SMOOTH_F
+        blend = np.clip((dist + BAND_SMOOTH_F) / (2 * BAND_SMOOTH_F), 0, 1)[..., None]
+        blended = colors[i] * (1 - blend) + colors[i + 1] * blend
+        rgb = np.where(in_zone[..., None], blended, rgb)
+
     rgba = np.zeros(anom.shape + (4,), dtype='uint8')
     rgba[..., :3] = np.clip(rgb, 0, 255).astype('uint8')
-    rgba[..., 3] = np.where(valid, 255, 0).astype('uint8')
+    rgba[..., 3] = np.where(valid, np.round(fade * 255), 0).astype('uint8')
     return rgba
 
+def edge_fade(src_transform, shape, bbox_bounds):
+    # 1.0 deep inside the bbox, fading to 0 right at the edge. north-up raster so x only
+    # depends on col and y only depends on row, no need for a full 2d coordinate grid
+    h, w = shape
+    xs = src_transform.c + src_transform.a * (np.arange(w) + 0.5)
+    ys = src_transform.f + src_transform.e * (np.arange(h) + 0.5)
+    left, bottom, right, top = bbox_bounds
+    dist_x = np.minimum(xs - left, right - xs)
+    dist_y = np.minimum(ys - bottom, top - ys)
+    dist = np.minimum(dist_x[None, :], dist_y[:, None])
+    return np.clip(dist / FADE_METERS, 0, 1).astype('float32')
+
 def make_heat_tiles():
+    if os.path.exists(HEAT_DIR):
+        shutil.rmtree(HEAT_DIR)  # old tiles from the narrower bbox/zoom range would otherwise linger
     os.makedirs(HEAT_DIR, exist_ok=True)
     written = 0
     skipped = 0
     with rasterio.open(ANOM_PATH) as src:
         src_transform, src_crs, src_nodata = src.transform, src.crs, src.nodata
         src_band = src.read(1)
+        bbox_bounds = transform_bounds('EPSG:4326', src_crs, *BBOX)
+        fade = edge_fade(src_transform, src_band.shape, bbox_bounds)
 
     for z in HEAT_ZOOMS:
         tiles = list(mercantile.tiles(*BBOX, [z]))
@@ -85,10 +115,22 @@ def make_heat_tiles():
                 skipped += 1
                 continue
 
-            rgba = anomaly_to_rgba(dest, valid)
+            fade_dest = np.zeros((256, 256), dtype='float32')
+            reproject(
+                source=fade,
+                destination=fade_dest,
+                src_transform=src_transform,
+                src_crs=src_crs,
+                dst_transform=tile_transform,
+                dst_crs='EPSG:3857',
+                resampling=Resampling.bilinear
+            )
+
+            rgba = anomaly_to_rgba(dest, valid, fade_dest)
+            img = Image.fromarray(rgba, 'RGBA').quantize(colors=HEAT_PALETTE_COLORS, method=Image.Quantize.FASTOCTREE)
             tile_dir = f'{HEAT_DIR}/{z}/{tile.x}'
             os.makedirs(tile_dir, exist_ok=True)
-            Image.fromarray(rgba, 'RGBA').save(f'{tile_dir}/{tile.y}.png')
+            img.save(f'{tile_dir}/{tile.y}.png')
             written += 1
 
     print(f'heat tiles: {written} written, {skipped} empty and skipped')
@@ -135,6 +177,8 @@ def build_grid_stack():
     return stack, grid_w, grid_h, grid_transform
 
 def write_grid_chunks(stack, grid_w, grid_h):
+    if os.path.exists(GRID_DIR):
+        shutil.rmtree(GRID_DIR)  # stale chunks from the old narrower bbox would otherwise linger
     os.makedirs(GRID_DIR, exist_ok=True)
     chunks_x = int(np.ceil(grid_w / CHUNK_CELLS))
     chunks_y = int(np.ceil(grid_h / CHUNK_CELLS))
@@ -153,7 +197,7 @@ def write_grid_chunks(stack, grid_w, grid_h):
                 skipped += 1
                 continue
 
-            with gzip.open(f'{GRID_DIR}/{col_chunk}_{row_chunk}.bin.gz', 'wb') as f:
+            with gzip.open(f'{GRID_DIR}/{col_chunk}_{row_chunk}.bin.gz', 'wb', compresslevel=9) as f:
                 f.write(block.tobytes())
             written += 1
 

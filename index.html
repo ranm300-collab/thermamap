@@ -23,19 +23,42 @@
 
 <button id="heat-toggle" type="button">Heat</button>
 <div id="heat-legend" hidden>
-  <div id="heat-legend-bar">
-    <div id="heat-marker-start" class="heat-marker" hidden>
-      <div class="heat-marker-label"></div>
-      <div class="heat-marker-shape"></div>
+  <div id="heat-legend-title">Summer ground heat</div>
+  <div id="heat-legend-bands">
+    <div class="heat-band" id="heat-band-0">
+      <span class="heat-band-swatch"></span>
+      <span class="heat-band-label">Much cooler</span>
+      <span class="heat-band-range">below -6°</span>
+      <span class="heat-band-tags"></span>
     </div>
-    <div id="heat-marker-dest" class="heat-marker" hidden>
-      <div class="heat-marker-label"></div>
-      <div class="heat-marker-shape"></div>
+    <div class="heat-band" id="heat-band-1">
+      <span class="heat-band-swatch"></span>
+      <span class="heat-band-label">Cooler</span>
+      <span class="heat-band-range">-6° to -2°</span>
+      <span class="heat-band-tags"></span>
+    </div>
+    <div class="heat-band" id="heat-band-2">
+      <span class="heat-band-swatch"></span>
+      <span class="heat-band-label">Typical</span>
+      <span class="heat-band-range">-2° to +2°</span>
+      <span class="heat-band-tags"></span>
+    </div>
+    <div class="heat-band" id="heat-band-3">
+      <span class="heat-band-swatch"></span>
+      <span class="heat-band-label">Hotter</span>
+      <span class="heat-band-range">+2° to +6°</span>
+      <span class="heat-band-tags"></span>
+    </div>
+    <div class="heat-band" id="heat-band-4">
+      <span class="heat-band-swatch"></span>
+      <span class="heat-band-label">Much hotter</span>
+      <span class="heat-band-range">above +6°</span>
+      <span class="heat-band-tags"></span>
     </div>
   </div>
   <div id="heat-marker-start-nodata" class="heat-marker-nodata" hidden>start: no heat data here</div>
   <div id="heat-marker-dest-nodata" class="heat-marker-nodata" hidden>dest: no heat data here</div>
-  <div id="heat-legend-caption">summer ground temps from nasa/usgs landsat</div>
+  <div id="heat-legend-caption">vs typical abq streets, from nasa/usgs landsat</div>
 </div>
 
 <div id="search-card" hidden>

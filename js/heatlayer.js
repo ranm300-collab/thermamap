@@ -1,7 +1,9 @@
-const HEAT_MIN_ZOOM = 10;
+const HEAT_MIN_ZOOM = 12; // matches the map's own minZoom, nothing below this ever gets requested
 const HEAT_MAX_ZOOM = 15; // tiles stop here, past this we overzoom the z15 tile instead
-const HEAT_CLAMP_F = 15; // same clamp used to build the tile colors, keeps markers lined up with the bar
-const NUDGE_THRESHOLD_PCT = 10;
+
+// same 5 bands as export_web.py, upper edge of bands 0-3
+const HEAT_BAND_THRESHOLDS = [-6, -2, 2, 6];
+const HEAT_BAND_NAMES = ['Much cooler', 'Cooler', 'Typical', 'Hotter', 'Much hotter'];
 
 let heatMapType = null;
 let heatOn = false;
@@ -29,60 +31,58 @@ function toggleHeat() {
   updateHeatMarkers();
 }
 
-function anomalyToPercent(anomaly) {
-  const clamped = Math.max(-HEAT_CLAMP_F, Math.min(HEAT_CLAMP_F, anomaly));
-  return ((clamped + HEAT_CLAMP_F) / (2 * HEAT_CLAMP_F)) * 100;
-}
-
-function formatAnomaly(anomaly) {
-  const rounded = Math.round(anomaly);
-  return (rounded >= 0 ? '+' : '') + rounded + '°';
+function bandIndexFor(anomaly) {
+  let i = 0;
+  while (i < HEAT_BAND_THRESHOLDS.length && anomaly >= HEAT_BAND_THRESHOLDS[i]) i++;
+  return i;
 }
 
 function updateLegendVisibility() {
-  const bothSet = !!(startPlace && destPlace);
+  const bothSet = !!(state.start && state.dest);
   const legend = document.getElementById('heat-legend');
   legend.hidden = !(heatOn || bothSet);
   legend.classList.toggle('compact', !heatOn && bothSet);
 }
 
-function positionMarker(label, elId, nodataId, place) {
-  const el = document.getElementById(elId);
+function clearBandTags() {
+  for (let i = 0; i < HEAT_BAND_NAMES.length; i++) {
+    document.querySelector(`#heat-band-${i} .heat-band-tags`).textContent = '';
+  }
+}
+
+// sticks a "Start"/"Dest" tag on whichever band row the place falls into
+function tagBand(i, text) {
+  const tagsEl = document.querySelector(`#heat-band-${i} .heat-band-tags`);
+  tagsEl.textContent = tagsEl.textContent ? `${tagsEl.textContent}, ${text}` : text;
+}
+
+async function positionMarker(label, nodataId, place) {
   const nodataEl = document.getElementById(nodataId);
 
   if (!place) {
-    el.hidden = true;
     nodataEl.hidden = true;
-    return Promise.resolve(null);
+    return;
   }
 
-  return getGridCell(place.lat, place.lng).then(cell => {
-    if (!cell || cell.anomaly === null) {
-      el.hidden = true;
-      nodataEl.hidden = false;
-      return null;
-    }
-    nodataEl.hidden = true;
-    const pct = anomalyToPercent(cell.anomaly);
-    el.style.left = pct + '%';
-    el.querySelector('.heat-marker-label').textContent = `${label} ${formatAnomaly(cell.anomaly)}`;
-    el.hidden = false;
-    return pct;
-  });
+  const cell = await getGridCell(place.lat, place.lng);
+  if (!cell || cell.anomaly === null) {
+    nodataEl.hidden = false;
+    return;
+  }
+  nodataEl.hidden = true;
+  tagBand(bandIndexFor(cell.anomaly), label);
 }
 
 function updateHeatMarkers() {
   updateLegendVisibility();
   if (document.getElementById('heat-legend').hidden) return;
+  clearBandTags();
 
-  const startLabel = startPlace && startPlace.name === 'Current location' ? 'You' : 'Start';
+  const startLabel = state.start && state.start.name === 'Current location' ? 'You' : 'Start';
   Promise.all([
-    positionMarker(startLabel, 'heat-marker-start', 'heat-marker-start-nodata', startPlace),
-    positionMarker('Dest', 'heat-marker-dest', 'heat-marker-dest-nodata', destPlace)
-  ]).then(([startPct, destPct]) => {
-    const close = startPct !== null && destPct !== null && Math.abs(startPct - destPct) < NUDGE_THRESHOLD_PCT;
-    document.getElementById('heat-marker-dest').classList.toggle('nudge', close);
-  });
+    positionMarker(startLabel, 'heat-marker-start-nodata', state.start),
+    positionMarker('Dest', 'heat-marker-dest-nodata', state.dest)
+  ]);
 }
 
 function initHeatLayer() {
