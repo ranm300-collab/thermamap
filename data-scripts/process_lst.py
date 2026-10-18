@@ -7,17 +7,28 @@ import rasterio
 from rasterio.warp import reproject, transform, transform_bounds, Resampling
 from rasterio.transform import from_origin, rowcol
 import matplotlib.pyplot as plt
+from common import BBOX_LANDSAT, TARGET_CRS, LANDSAT_PIXEL_SIZE
 
 LANDSAT_DIR = 'data/landsat'
 SHARP_DIR = 'data/landsat/sharp'
 OUT_DIR = 'data/processed'
-BBOX = [-106.95, 34.85, -106.35, 35.40]  # west, south, east, north, wider than the map now, more scenes to work with
-TARGET_CRS = 'EPSG:32613'  # utm 13n, what most of our scenes are alredy in
-PIXEL_SIZE = 30
+BBOX = BBOX_LANDSAT
+PIXEL_SIZE = LANDSAT_PIXEL_SIZE
 ST_SCALE = 0.00341802
 ST_OFFSET = 149.0
 MIN_VALID_SCENES = 3
 NODATA = -9999.0
+
+HEIGHTS_PATH = 'data/processed/abq_heights_5m.tif'
+TALL_OBSTACLE_M = 3  # same cutoff process_canopy uses for "thats a real tree/building, not noise"
+DEVELOPED_RADIUS_PX = 5  # ~150m at our 30m grid
+DEVELOPED_DENSITY = 0.12  # at least this much of the area nearby has to be tall, not just one tree
+
+# the wide bbox pulls in a lot of open desert/mesa, which runs hotter than most of the
+# actual city and was dragging the "typical abq" baseline up, making the whole city look
+# cool by comparison. baseline now comes from developed pixels only (near a building/tree).
+# desert far from any development is still scored against that baseline, so it correctly
+# shows up hot - we're just not letting it set the baseline itself anymore
 
 # fill(bit0) + dilated cloud(bit1) + cloud(bit3) + cloud shadow(bit4), from usgs qa_pixel docs
 BAD_QA_BITS = 0b11011
@@ -130,6 +141,35 @@ def save_preview(anomaly, path):
     fig.savefig(path, dpi=100, bbox_inches='tight')
     plt.close(fig)
 
+def local_tall_fraction(mask, radius):
+    # % of cells within radius pixels that are tall. a single tree 150m away used to be
+    # enough to count a desert pixel as "developed" - needed actual density, not just presence
+    padded = np.pad(mask.astype('float32'), radius, mode='constant', constant_values=0)
+    total = np.zeros(mask.shape, dtype='float32')
+    n = 0
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dy * dy + dx * dx > radius * radius:
+                continue
+            total += padded[radius + dy:radius + dy + mask.shape[0], radius + dx:radius + dx + mask.shape[1]]
+            n += 1
+    return total / n
+
+def load_developed_mask(grid_transform, width, height):
+    with rasterio.open(HEIGHTS_PATH) as src:
+        tall = np.zeros((height, width), dtype='float32')
+        reproject(
+            source=rasterio.band(src, 1),
+            destination=tall,
+            src_transform=src.transform,
+            src_crs=src.crs,
+            dst_transform=grid_transform,
+            dst_crs=TARGET_CRS,
+            resampling=Resampling.max  # a tall pixel anywhere in the 30m cell counts
+        )
+    density = local_tall_fraction(tall >= TALL_OBSTACLE_M, DEVELOPED_RADIUS_PX)
+    return density >= DEVELOPED_DENSITY
+
 def sample_spots(anomaly, grid_transform):
     results = {}
     for label, (lat, lng) in SPOTS.items():
@@ -166,17 +206,21 @@ if __name__ == '__main__':
     median_f = np.nanmedian(stack, axis=0)
     median_f[valid_count < MIN_VALID_SCENES] = np.nan
 
-    citywide_median = np.nanmedian(median_f)
-    anomaly = median_f - citywide_median
+    print('finding developed areas for the baseline...')
+    developed = load_developed_mask(grid_transform, width, height)
+    citywide_median = np.nanmedian(median_f[developed])
+    anomaly = median_f - citywide_median  # still applied to every pixel, desert included
 
     write_geotiff(f'{OUT_DIR}/abq_lst_f.tif', median_f, grid_transform)
     write_geotiff(f'{OUT_DIR}/abq_lst_count.tif', valid_count, grid_transform)
     write_geotiff(f'{OUT_DIR}/abq_lst_anom.tif', anomaly, grid_transform)
     save_preview(anomaly, f'{OUT_DIR}/abq_lst_preview.png')
 
+    west, south, east, north = transform_bounds(TARGET_CRS, 'EPSG:4326', *rasterio.transform.array_bounds(height, width, grid_transform))
     print()
+    print(f'covered bounds: {west:.4f}, {south:.4f}, {east:.4f}, {north:.4f}')
     print(f'{len(pairs)} scenes used, {sharp_used} from sharpened data, {len(pairs) - sharp_used} plain fallback')
-    print(f'citywide median: {citywide_median:.1f}f')
+    print(f'baseline (developed areas only): {citywide_median:.1f}f, from {developed.sum()} developed cells')
     print(f'5th percentile: {np.nanpercentile(median_f, 5):.1f}f')
     print(f'95th percentile: {np.nanpercentile(median_f, 95):.1f}f')
     print('spot checks:')
