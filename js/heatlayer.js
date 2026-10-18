@@ -27,6 +27,7 @@ function toggleHeat() {
     map.overlayMapTypes.push(heatMapType);
   } else {
     map.overlayMapTypes.clear();
+    closeTapPopup();
   }
   updateHeatMarkers();
 }
@@ -98,4 +99,198 @@ function initHeatLayer() {
   map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(document.getElementById('heat-legend'));
   toggle.addEventListener('click', toggleHeat);
   updateHeatMarkers();
+  initTapPopup();
+}
+
+// popup you get from tapping the map, only live while heat is on
+let tapProjection = null;
+let tapDotMarker = null;
+let tapPopupOpen = false;
+let tapRequestId = 0;
+
+const TAP_POPUP_MARGIN = 10;
+const TAP_POPUP_DOT_GAP = 16; // clears the dot so the card doesn't sit right on top of it
+
+function latLngToPagePoint(latLng) {
+  const projection = tapProjection.getProjection();
+  if (!projection) return null;
+  const pt = projection.fromLatLngToContainerPixel(latLng);
+  const mapRect = map.getDiv().getBoundingClientRect();
+  return { x: mapRect.left + pt.x, y: mapRect.top + pt.y };
+}
+
+function showTapDot(latLng) {
+  clearTapDot();
+  tapDotMarker = new google.maps.Marker({
+    position: latLng,
+    map: map,
+    clickable: false,
+    zIndex: 8,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 5,
+      fillColor: '#fdf6ee',
+      fillOpacity: 1,
+      strokeColor: '#2b2620',
+      strokeWeight: 2
+    }
+  });
+}
+
+function clearTapDot() {
+  if (tapDotMarker) tapDotMarker.setMap(null);
+  tapDotMarker = null;
+}
+
+// same shade cutoff as the route scoring
+function sunLineFor(cell, date, timeLabel) {
+  const hour = date.getHours();
+  if (hour < SUN_UP_HOUR || hour > SUN_DOWN_HOUR) return 'Sun is down';
+  const frac = shadeFractionFor(cell, date);
+  if (frac === null) return null;
+  const suffix = timeLabel ? `at ${timeLabel}` : 'right now';
+  return (frac >= IN_SHADE_FRAC ? 'Shaded' : 'In the sun') + ' ' + suffix;
+}
+
+function groundLineFor(anomaly) {
+  const rounded = Math.round(anomaly);
+  if (rounded > 2) return `About ${rounded}°F hotter than typical ABQ ground`;
+  if (rounded < -2) return `About ${Math.abs(rounded)}°F cooler than typical ABQ ground`;
+  return 'About typical for ABQ';
+}
+
+function buildTapPopupData(cell) {
+  if (!cell || cell.anomaly === null || cell.canopy === null || isRooftopCell(cell)) {
+    return { nodata: true };
+  }
+  const departureMs = currentDepartureMs();
+  const date = new Date(departureMs);
+  const timeLabel = state.leaveTimeMs === null ? null : formatClockTime(date);
+  return {
+    nodata: false,
+    groundLine: groundLineFor(cell.anomaly),
+    canopyLine: `${Math.round(cell.canopy)}% tree cover`,
+    sunLine: sunLineFor(cell, date, timeLabel)
+  };
+}
+
+function renderTapPopup(data) {
+  const content = document.getElementById('tap-popup-content');
+  content.textContent = '';
+
+  if (data.loading) {
+    const line = document.createElement('div');
+    line.className = 'tap-popup-loading';
+    line.textContent = 'checking...';
+    content.appendChild(line);
+    return;
+  }
+
+  if (data.nodata) {
+    const line = document.createElement('div');
+    line.className = 'tap-popup-nodata';
+    line.textContent = 'No street level data here';
+    content.appendChild(line);
+    return;
+  }
+
+  [data.groundLine, data.canopyLine, data.sunLine].forEach(text => {
+    if (!text) return;
+    const line = document.createElement('div');
+    line.className = 'tap-popup-line';
+    line.textContent = text;
+    content.appendChild(line);
+  });
+
+  const footnote = document.createElement('div');
+  footnote.className = 'tap-popup-footnote';
+  footnote.textContent = 'summer satellite average';
+  content.appendChild(footnote);
+}
+
+// phone width has a bottom sheet over the map, the popup needs to float above it
+function tapPopupMaxBottom() {
+  if (!isMobileSheet()) return window.innerHeight - TAP_POPUP_MARGIN;
+  const panel = document.getElementById('route-cards-panel');
+  if (panel.hidden) return window.innerHeight - TAP_POPUP_MARGIN;
+  return panel.getBoundingClientRect().top - TAP_POPUP_MARGIN;
+}
+
+function positionTapPopup(pagePoint) {
+  const popup = document.getElementById('tap-popup');
+  const rect = popup.getBoundingClientRect();
+  const maxBottom = tapPopupMaxBottom();
+
+  let left = pagePoint.x - rect.width / 2;
+  left = Math.max(TAP_POPUP_MARGIN, Math.min(left, window.innerWidth - rect.width - TAP_POPUP_MARGIN));
+
+  // prefer sitting above the tapped spot, flip below it if that would run off the top
+  let top = pagePoint.y - TAP_POPUP_DOT_GAP - rect.height;
+  if (top < TAP_POPUP_MARGIN) top = pagePoint.y + TAP_POPUP_DOT_GAP;
+  top = Math.min(top, maxBottom - rect.height);
+  top = Math.max(TAP_POPUP_MARGIN, top);
+
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
+function closeTapPopup() {
+  tapPopupOpen = false;
+  tapRequestId++;
+  document.getElementById('tap-popup').hidden = true;
+  clearTapDot();
+}
+
+async function openTapPopup(latLng) {
+  const requestId = ++tapRequestId;
+  tapPopupOpen = true;
+  showTapDot(latLng);
+
+  renderTapPopup({ loading: true });
+  const popup = document.getElementById('tap-popup');
+  popup.hidden = false;
+  const pagePoint = latLngToPagePoint(latLng);
+  if (pagePoint) positionTapPopup(pagePoint);
+
+  const cell = await getGridCell(latLng.lat(), latLng.lng());
+  if (requestId !== tapRequestId) return; // closed or tapped elsewhere while this was loading
+
+  renderTapPopup(buildTapPopupData(cell));
+  if (pagePoint) positionTapPopup(pagePoint); // real content is a different size than "checking..."
+}
+
+function initTapPopup() {
+  // google isn't loaded when this file first runs, so build the overlay class in here
+  function TapProjection() {}
+  TapProjection.prototype = Object.create(google.maps.OverlayView.prototype);
+  TapProjection.prototype.onAdd = function () {};
+  TapProjection.prototype.draw = function () {};
+  TapProjection.prototype.onRemove = function () {};
+
+  tapProjection = new TapProjection();
+  tapProjection.setMap(map);
+
+  map.addListener('click', e => {
+    if (!heatOn) return;
+    openTapPopup(e.latLng);
+  });
+  // position is a one-time calc, not synced on pan/zoom, so just close instead
+  map.addListener('dragstart', closeTapPopup);
+  map.addListener('zoom_changed', closeTapPopup);
+
+  document.getElementById('tap-popup-close').addEventListener('click', closeTapPopup);
+  document.addEventListener('click', e => {
+    if (!tapPopupOpen) return;
+    if (document.getElementById('tap-popup').contains(e.target)) return;
+    if (isMapSurfaceClick(e.target)) return; // real map taps go through the listener above
+    closeTapPopup();
+  });
+}
+
+// map.controls puts search-card/heat-toggle/heat-legend inside #map's dom, gotta exclude those
+function isMapSurfaceClick(target) {
+  const mapDiv = document.getElementById('map');
+  if (!mapDiv.contains(target)) return false;
+  const controlIds = ['search-card', 'heat-toggle', 'heat-legend'];
+  return !controlIds.some(id => document.getElementById(id).contains(target));
 }
