@@ -86,7 +86,7 @@ body {
   padding: 8px 12px;
   margin-bottom: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  width: 220px;
+  width: 300px;
 }
 
 #heat-legend-title {
@@ -97,27 +97,26 @@ body {
 
 #heat-legend-bands {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
 }
 
 .heat-band {
   display: flex;
   flex-direction: column;
-}
-
-.heat-band-row {
-  display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.68rem;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.6rem;
 }
 
 .heat-band-swatch {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 3px;
-  flex: 0 0 auto;
+  margin-bottom: 2px;
 }
 
 #heat-band-0 .heat-band-swatch { background: #22568f; }
@@ -126,10 +125,6 @@ body {
 #heat-band-3 .heat-band-swatch { background: #d68644; }
 #heat-band-4 .heat-band-swatch { background: #9c2b1f; }
 
-.heat-band-label {
-  flex: 1 1 auto;
-}
-
 .heat-band-range {
   color: #a39c8c;
 }
@@ -137,10 +132,11 @@ body {
 .heat-band-markers {
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .heat-band-marker {
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: var(--accent);
 }
@@ -479,12 +475,17 @@ body {
 
 @media (max-width: 420px) {
   #heat-legend {
-    width: 170px;
+    width: 260px;
     padding: 6px 10px;
   }
 
-  .heat-band-row, .heat-band-marker {
-    font-size: 0.62rem;
+  .heat-band, .heat-band-marker {
+    font-size: 0.56rem;
+  }
+
+  /* not enough room once labels wrap, the swatch colors still read fine */
+  .heat-band-range {
+    display: none;
   }
 
   #heat-legend-caption {

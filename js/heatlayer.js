@@ -155,11 +155,13 @@ function sunLineFor(cell, date, timeLabel) {
   return (frac >= IN_SHADE_FRAC ? 'Shaded' : 'In the sun') + ' ' + suffix;
 }
 
+// same band names as the legend, so the popup and legend say the same thing
 function groundLineFor(anomaly) {
+  const name = HEAT_BAND_NAMES[bandIndexFor(anomaly)];
+  if (name === 'Typical') return 'Typical: about typical ABQ ground';
   const rounded = Math.round(anomaly);
-  if (rounded > 2) return `About ${rounded}°F hotter than typical ABQ ground`;
-  if (rounded < -2) return `About ${Math.abs(rounded)}°F cooler than typical ABQ ground`;
-  return 'About typical for ABQ';
+  const dir = rounded >= 0 ? 'above' : 'below';
+  return `${name}: about ${Math.abs(rounded)}°F ${dir} typical ABQ ground`;
 }
 
 function buildTapPopupData(cell) {
