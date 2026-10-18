@@ -5,6 +5,7 @@ import json
 import ssl
 import certifi
 import urllib.request
+from common import BBOX_MAP
 
 # this python installs own cert bundle is missing, urlretrieve fails ssl verify without this
 urllib.request.install_opener(
@@ -15,7 +16,7 @@ urllib.request.install_opener(
 
 TILES_INDEX_URL = 'https://dataforgood-fb-data.s3.amazonaws.com/forests/v2/global/dinov3_global_chm_v2_ml3/tiles.geojson'
 TILE_BASE_URL = 'https://dataforgood-fb-data.s3.amazonaws.com/forests/v2/global/dinov3_global_chm_v2_ml3/chm'
-BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
+BBOX = BBOX_MAP
 INDEX_PATH = 'data/canopy/tiles.geojson'
 OUT_DIR = 'data/canopy/raw'
 

@@ -12,6 +12,7 @@ from rasterio import Affine
 from rasterio.windows import Window, from_bounds
 from rasterio.transform import array_bounds
 from rasterio.warp import reproject, transform_bounds, Resampling
+from common import BBOX_MAP, TARGET_CRS
 
 urllib.request.install_opener(
     urllib.request.build_opener(
@@ -21,12 +22,11 @@ urllib.request.install_opener(
 
 STAC_URL = 'https://planetarycomputer.microsoft.com/api/stac/v1'
 COLLECTION = '3dep-lidar-hag'
-BBOX = [-106.85, 34.9, -106.45, 35.35]  # west, south, east, north, same as the map
+BBOX = BBOX_MAP
 RAW_DIR = 'data/heights/raw'
 CANOPY_PCT_PATH = 'data/processed/abq_canopy_pct_5m.tif'
 CANOPY_HEIGHT_PATH = 'data/processed/abq_canopy_height_5m.tif'
 OUT_PATH = 'data/processed/abq_heights_5m.tif'
-TARGET_CRS = 'EPSG:32613'
 CHUNK_ROWS = 300
 LIDAR_NODATA = -9999.0
 MAX_OBSTACLE_M = 60  # taller than anything real in abq, clips lidar noise near steep terrain

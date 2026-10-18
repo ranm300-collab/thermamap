@@ -7,10 +7,11 @@ import planetary_computer
 import rasterio
 from rasterio.windows import from_bounds
 from rasterio.warp import transform_bounds
+from common import BBOX_LANDSAT
 
 STAC_URL = 'https://planetarycomputer.microsoft.com/api/stac/v1'
 COLLECTION = 'landsat-c2-l2'
-BBOX = [-106.95, 34.85, -106.35, 35.40]  # west, south, east, north, wider than the map now, more scenes to work with
+BBOX = BBOX_LANDSAT
 YEARS = list(range(2019, 2027))
 PLATFORMS = ['landsat-8', 'landsat-9']  # lowercase w/ dash, not "Landsat 8"
 MAX_CLOUD = 10

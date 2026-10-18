@@ -9,6 +9,7 @@ import rasterio
 from rasterio.transform import Affine, rowcol
 from rasterio.warp import reproject, transform as transform_coords, Resampling
 import matplotlib.pyplot as plt
+from common import LANDSAT_PIXEL_SIZE
 
 LANDSAT_DIR = 'data/landsat'
 OUT_DIR = 'data/landsat/sharp'
@@ -30,7 +31,7 @@ MIN_R2 = 0.3  # below this ndvi/albedo barely explain the temp pattern, sharpeni
 
 DOWNTOWN = (35.084, -106.650)
 PREVIEW_KM = 1.5
-PIXEL_SIZE = 30
+PIXEL_SIZE = LANDSAT_PIXEL_SIZE
 
 
 def find_scenes():

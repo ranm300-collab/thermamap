@@ -8,13 +8,13 @@ from rasterio import Affine
 from rasterio.windows import Window, from_bounds
 from rasterio.transform import array_bounds, rowcol
 from rasterio.warp import reproject, transform, transform_bounds, Resampling
+from common import TARGET_CRS
 
 RAW_DIR = 'data/canopy/raw'
 OUT_DIR = 'data/processed'
 # reading this file's own grid instead of recomputing bounds, so the 30m canopy
 # and lst grids land on the exact same pixels no matter what
 LST_GRID_PATH = 'data/processed/abq_lst_f.tif'
-TARGET_CRS = 'EPSG:32613'
 TREE_HEIGHT_M = 3  # shrubs and short stuff dont really shade someone walking
 # raw tiles are uint8 meters straight up, no nodata flag in the file, 0 = ground
 CHUNK_ROWS_30 = 50
