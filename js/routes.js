@@ -150,10 +150,27 @@ function renderRouteCards() {
     const card = document.createElement('div');
     card.className = 'route-card' + (i === selectedRouteIndex ? ' selected' : '');
 
+    const top = document.createElement('div');
+    top.className = 'route-card-top';
+
     const label = document.createElement('div');
     label.className = 'route-card-label';
     label.textContent = route.isDetour ? 'Shady detour' : (ROUTE_LABELS[i] || `Route ${i + 1}`);
-    card.appendChild(label);
+    top.appendChild(label);
+
+    if (i === selectedRouteIndex) {
+      const startBtn = document.createElement('button');
+      startBtn.type = 'button';
+      startBtn.className = 'route-card-start-btn';
+      startBtn.textContent = 'Start';
+      startBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        startNav();
+      });
+      top.appendChild(startBtn);
+    }
+
+    card.appendChild(top);
 
     const main = document.createElement('div');
     main.className = 'route-card-main';
@@ -193,16 +210,6 @@ function renderRouteCards() {
         });
         card.appendChild(tipEl);
       }
-
-      const startBtn = document.createElement('button');
-      startBtn.type = 'button';
-      startBtn.className = 'route-card-start-btn';
-      startBtn.textContent = 'Start';
-      startBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        startNav();
-      });
-      card.appendChild(startBtn);
     }
 
     card.addEventListener('click', () => {

@@ -306,6 +306,13 @@ body {
   border: 1px solid var(--accent);
 }
 
+.route-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .route-card-label {
   font-size: 0.7rem;
   color: #a39c8c;
@@ -344,15 +351,13 @@ body {
 }
 
 .route-card-start-btn {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 12px;
+  flex: 0 0 auto;
+  padding: 8px 16px;
   border: none;
   border-radius: 6px;
   background: var(--accent);
   color: #fdf6ee;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
