@@ -141,6 +141,33 @@ def save_preview(anomaly, path):
     fig.savefig(path, dpi=100, bbox_inches='tight')
     plt.close(fig)
 
+GAP_FILL_RADIUS = 1
+GAP_FILL_PASSES = 3  # a few 1px passes so small holes close but big ones stay mostly empty
+
+def fill_small_gaps(arr, radius, passes):
+    # averages in a nan pixel from its valid neighbors, repeated a few times. a hole a
+    # couple pixels wide fully closes this way, a big one just shrinks a little at the edges
+    filled = arr.copy()
+    for _ in range(passes):
+        nanmask = np.isnan(filled)
+        if not nanmask.any():
+            break
+        padded = np.pad(np.nan_to_num(filled, nan=0.0), radius, mode='constant')
+        valid = np.pad((~nanmask).astype('float32'), radius, mode='constant')
+        total = np.zeros(filled.shape, dtype='float32')
+        count = np.zeros(filled.shape, dtype='float32')
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                if dy == 0 and dx == 0:
+                    continue
+                total += padded[radius + dy:radius + dy + filled.shape[0], radius + dx:radius + dx + filled.shape[1]]
+                count += valid[radius + dy:radius + dy + filled.shape[0], radius + dx:radius + dx + filled.shape[1]]
+        with np.errstate(invalid='ignore', divide='ignore'):
+            avg = total / count
+        can_fill = nanmask & (count > 0)
+        filled[can_fill] = avg[can_fill]
+    return filled
+
 def local_tall_fraction(mask, radius):
     # % of cells within radius pixels that are tall. a single tree 150m away used to be
     # enough to count a desert pixel as "developed" - needed actual density, not just presence
@@ -205,6 +232,7 @@ if __name__ == '__main__':
     # median not mean, one hazy or weirdly cold day shouldnt drag the whole pixel around
     median_f = np.nanmedian(stack, axis=0)
     median_f[valid_count < MIN_VALID_SCENES] = np.nan
+    median_f = fill_small_gaps(median_f, GAP_FILL_RADIUS, GAP_FILL_PASSES)
 
     print('finding developed areas for the baseline...')
     developed = load_developed_mask(grid_transform, width, height)
