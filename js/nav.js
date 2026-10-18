@@ -5,9 +5,14 @@ const NAV_ZOOM = { WALKING: 18, BICYCLING: 17 };
 const NAV_MIN_MOVING_MPS = 0.3; // gps reports tiny nonzero speeds sometimes even standing still
 const NAV_WALKED_COLOR = '#c9bfa8'; // close to the road color, reads as "already done"
 
+// dev only, lets me test the whole flow from a laptop w/o real gps. ~5x real speed
+const SIM_SPEEDS_MPS = { WALKING: 7, BICYCLING: 22.5 };
+const SIM_STEP_MS = 500;
+
 let navActive = false;
 let navFollowing = true;
 let navWatchId = null;
+let navSimTimer = null;
 let navWakeLock = null;
 let navDragListener = null;
 let navMarker = null;
@@ -15,6 +20,10 @@ let navAccuracyCircle = null;
 let navWalkedLine = null;
 let navLastFix = null;
 let navLastHeading = 0;
+
+function simNavOn() {
+  return urlFlag('simnav');
+}
 
 // a plain symbol path instead of an svg icon like hereIcon(), since only symbols support rotation
 function navArrowIcon(heading) {
@@ -161,6 +170,37 @@ function startRealWatch() {
   );
 }
 
+function samplePointAtDist(samples, dist) {
+  const total = samples[samples.length - 1].dist;
+  if (dist >= total) return null; // reached the end, sim just stops there
+  for (let i = 1; i < samples.length; i++) {
+    if (samples[i].dist >= dist) {
+      const a = samples[i - 1], b = samples[i];
+      const t = (dist - a.dist) / (b.dist - a.dist || 1);
+      return { lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t };
+    }
+  }
+  return samples[samples.length - 1];
+}
+
+// dev tool only (?simnav=1) - fakes movement along the route on a timer so this can be
+// tested from a laptop. real navigation never uses a timer, watchPosition drives it instead
+function startSimNav() {
+  const samples = routeScores[selectedRouteIndex].samples;
+  const speed = SIM_SPEEDS_MPS[travelMode] || SIM_SPEEDS_MPS.WALKING;
+  let simDist = 0;
+  navSimTimer = setInterval(() => {
+    simDist += speed * (SIM_STEP_MS / 1000);
+    const point = samplePointAtDist(samples, simDist);
+    if (!point) {
+      clearInterval(navSimTimer);
+      navSimTimer = null;
+      return;
+    }
+    handleNavFix(point.lat, point.lng, null, speed, 15);
+  }, SIM_STEP_MS);
+}
+
 async function acquireWakeLock() {
   try {
     navWakeLock = await navigator.wakeLock.request('screen');
@@ -207,7 +247,12 @@ async function startNav() {
   navDragListener = map.addListener('dragstart', onNavDragStart);
 
   await acquireWakeLock();
-  startRealWatch();
+
+  if (simNavOn()) {
+    startSimNav();
+  } else {
+    startRealWatch();
+  }
 }
 
 function endNav() {
@@ -216,6 +261,10 @@ function endNav() {
   if (navWatchId !== null) {
     navigator.geolocation.clearWatch(navWatchId);
     navWatchId = null;
+  }
+  if (navSimTimer) {
+    clearInterval(navSimTimer);
+    navSimTimer = null;
   }
   releaseWakeLock();
 
