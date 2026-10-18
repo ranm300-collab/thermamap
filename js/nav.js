@@ -25,6 +25,10 @@ const NAV_OFF_ROUTE_MAX_ACCURACY_M = 50;
 const NAV_REROUTE_COOLDOWN_MS = 30000; // at most one reroute this often
 const NAV_REROUTE_MAX_PER_TRIP = 10; // the routes api has a daily quota, dont burn it chasing gps noise
 
+// ~300ft/~600ft and ~50ft/~100ft, when to announce an upcoming turn
+const NAV_SPEECH_FAR_M = { WALKING: 91, BICYCLING: 183 };
+const NAV_SPEECH_NEAR_M = { WALKING: 15, BICYCLING: 30 };
+
 // dev only, lets me test the whole flow from a laptop w/o real gps. ~5x real speed
 const SIM_SPEEDS_MPS = { WALKING: 7, BICYCLING: 22.5 };
 const SIM_STEP_MS = 500;
@@ -54,6 +58,11 @@ let navOffRouteStreak = 0;
 let navRerouting = false;
 let navLastRerouteMs = 0;
 let navRerouteCount = 0;
+
+let navVoiceOn = true;
+let navSpokenFar = false;
+let navSpokenNear = false;
+let navLastHeatKind = null;
 
 let navSimDist = 0;
 let navSimDriftUntilMs = null;
@@ -197,11 +206,60 @@ function formatBigDistance(meters) {
   return Math.max(rounded, 0) + ' ft';
 }
 
+// same rounding as formatBigDistance but spelled out, "ft"/"mi" read weird out loud
+function speechDistance(meters) {
+  if (meters >= NAV_DIST_MILE_CUTOFF_M) return (meters / 1609.34).toFixed(1) + ' miles';
+  const feet = meters * 3.28084;
+  const rounded = meters <= NAV_DIST_FINE_FT_M ? Math.round(feet / 10) * 10 : Math.round(feet / 50) * 50;
+  return Math.max(rounded, 0) + ' feet';
+}
+
+// abbreviations read fine on the card but sound off said out loud
+const SPEECH_SUFFIXES = [
+  [/\bNE\b/g, 'Northeast'], [/\bNW\b/g, 'Northwest'], [/\bSE\b/g, 'Southeast'], [/\bSW\b/g, 'Southwest'],
+  [/\bAve\b/g, 'Avenue'], [/\bBlvd\b/g, 'Boulevard'], [/\bRd\b/g, 'Road'], [/\bDr\b/g, 'Drive'],
+  [/\bLn\b/g, 'Lane'], [/\bCt\b/g, 'Court'], [/\bPl\b/g, 'Place'], [/\bSt\b/g, 'Street']
+];
+
+function speechify(text) {
+  return SPEECH_SUFFIXES.reduce((out, [pattern, word]) => out.replace(pattern, word), text);
+}
+
+function speechOk() {
+  return navVoiceOn && 'speechSynthesis' in window;
+}
+
+function speak(text) {
+  if (!speechOk()) return;
+  try {
+    speechSynthesis.cancel(); // newest announcement wins, dont let them stack up
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  } catch (err) { /* speech api flaky in some browsers despite the feature check, just skip it */ }
+}
+
+function stopSpeech() {
+  if (!('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); } catch (err) { /* nothing to stop, fine */ }
+}
+
+function toggleVoice() {
+  navVoiceOn = !navVoiceOn;
+  document.getElementById('nav-voice-toggle').textContent = navVoiceOn ? 'Voice on' : 'Voice off';
+  if (!navVoiceOn) stopSpeech();
+}
+
+function speakTurn(step, distRemaining) {
+  speak(`In ${speechDistance(distRemaining)}, ${lowerFirst(speechify(cleanInstruction(step)))}`);
+}
+
 // builds the per-step distance-along-route markers once, reusing the same scored samples
 // nav part 1 already fetches - so advancing steps is just comparing numbers, no new geometry
 function setupNavSteps() {
   navStepIndex = 0;
   navArrived = false;
+  navSpokenFar = false;
+  navSpokenNear = false;
+  navLastHeatKind = null;
   navOffRouteStreak = 0;
   navSimDist = 0; // reroutes call this too, progress-along-route restarts on the new route
   const leg = routes[selectedRouteIndex].legs && routes[selectedRouteIndex].legs[0];
@@ -222,6 +280,8 @@ function setupNavSteps() {
 function advanceNavStep(userDist) {
   while (navStepIndex < navSteps.length - 1 && navStepBoundaryDists[navStepIndex] - userDist <= NAV_STEP_ADVANCE_M) {
     navStepIndex++;
+    navSpokenFar = false;
+    navSpokenNear = false;
   }
 }
 
@@ -244,10 +304,43 @@ function heatHintFor(route, samples, userDist) {
   });
   if (total === 0) return null;
 
+  // card reads fine abbreviated, speech wants the full word and a touch more sentence shape
   const frac = shaded / total;
-  if (frac >= NAV_HEAT_SHADY_FRAC) return `Shady for the next ${formatBigDistance(windowDist)}`;
-  if (frac <= NAV_HEAT_SUNNY_FRAC) return `Sunny stretch ahead, about ${Math.round(NAV_HEAT_WINDOW_MS / 60000)} min`;
+  const minutes = Math.round(NAV_HEAT_WINDOW_MS / 60000);
+  if (frac >= NAV_HEAT_SHADY_FRAC) {
+    return {
+      kind: 'shady',
+      cardText: `Shady for the next ${formatBigDistance(windowDist)}`,
+      speechText: `Shady for the next ${speechDistance(windowDist)}`
+    };
+  }
+  if (frac <= NAV_HEAT_SUNNY_FRAC) {
+    return {
+      kind: 'sunny',
+      cardText: `Sunny stretch ahead, about ${minutes} min`,
+      speechText: `Sunny stretch ahead for about ${minutes} minute${minutes === 1 ? '' : 's'}`
+    };
+  }
   return null; // mixed, dont clutter the card
+}
+
+// NAV_STEP_ADVANCE_M and the "near" speech distance are both about 15m, so this has to run
+// and speak before advanceNavStep moves on, or the near announcement never gets a chance
+function checkTurnSpeech(userDist) {
+  const upcoming = navSteps[navStepIndex + 1];
+  if (!upcoming) return;
+
+  const distToManeuver = Math.max(0, navStepBoundaryDists[navStepIndex] - userDist);
+  const farM = NAV_SPEECH_FAR_M[travelMode] || NAV_SPEECH_FAR_M.WALKING;
+  const nearM = NAV_SPEECH_NEAR_M[travelMode] || NAV_SPEECH_NEAR_M.WALKING;
+
+  if (!navSpokenFar && distToManeuver <= farM) {
+    navSpokenFar = true;
+    speakTurn(upcoming, distToManeuver);
+  } else if (navSpokenFar && !navSpokenNear && distToManeuver <= nearM) {
+    navSpokenNear = true;
+    speakTurn(upcoming, distToManeuver);
+  }
 }
 
 function updateNavInstruction(route, samples, userDist) {
@@ -282,9 +375,13 @@ function updateNavInstruction(route, samples, userDist) {
   }
 
   const heatEl = document.getElementById('nav-instruction-heat');
-  const heatText = heatHintFor(route, samples, userDist);
-  heatEl.textContent = heatText || '';
-  heatEl.hidden = !heatText;
+  const heatHint = heatHintFor(route, samples, userDist);
+  heatEl.textContent = heatHint ? heatHint.cardText : '';
+  heatEl.hidden = !heatHint;
+
+  const heatKind = heatHint ? heatHint.kind : null;
+  if (heatKind === 'sunny' && navLastHeatKind !== 'sunny') speak(heatHint.speechText);
+  navLastHeatKind = heatKind;
 
   card.hidden = false;
 }
@@ -294,6 +391,7 @@ function checkArrival(lat, lng) {
   if (haversineMeters(lat, lng, state.dest.lat, state.dest.lng) > NAV_ARRIVE_M) return;
 
   navArrived = true;
+  speak('You have arrived');
   if (navStepsListOpen) toggleStepsList();
   document.getElementById('nav-instruction-arrow').innerHTML = maneuverArrow('DESTINATION');
   document.getElementById('nav-instruction-distance').textContent = "You've arrived";
@@ -363,6 +461,7 @@ async function tryReroute(lat, lng) {
   navRerouteCount++;
   document.getElementById('nav-reroute-status').hidden = true;
   showRerouting();
+  speak('Rerouting');
 
   try {
     const { Route } = await google.maps.importLibrary('routes');
@@ -471,6 +570,7 @@ function handleNavFix(lat, lng, heading, speed, accuracyM) {
       checkOffRoute(lat, lng, accuracyM, scored.samples, idx);
       // mid-reroute the old route/steps are about to be replaced, leave the card on "Rerouting..."
       if (!navRerouting) {
+        checkTurnSpeech(userDist);
         advanceNavStep(userDist);
         updateNavInstruction(route, scored.samples, userDist);
       }
@@ -581,6 +681,10 @@ function recenterNav() {
 
 async function startNav() {
   if (!routes.length) return;
+  // ios safari only allows speech started directly from a tap, so this is said right here
+  // to "unlock" it, otherwise later announcements (turns, rerouting) would just stay silent
+  speak('Starting route');
+
   setLeaveTime(null); // leaving now, so the route scoring and arrival math line up w/ reality
   setupNavSteps();
 
@@ -615,6 +719,7 @@ async function startNav() {
 
 function endNav() {
   navActive = false;
+  stopSpeech();
 
   if (navWatchId !== null) {
     navigator.geolocation.clearWatch(navWatchId);
@@ -648,6 +753,7 @@ function endNav() {
 document.getElementById('nav-end-btn').addEventListener('click', endNav);
 document.getElementById('nav-location-exit-btn').addEventListener('click', endNav);
 document.getElementById('nav-recenter-btn').addEventListener('click', recenterNav);
+document.getElementById('nav-voice-toggle').addEventListener('click', toggleVoice);
 
 document.getElementById('nav-instruction').addEventListener('click', () => {
   if (!navArrived) toggleStepsList();

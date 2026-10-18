@@ -610,6 +610,15 @@ body {
   gap: 8px;
 }
 
+#nav-voice-toggle {
+  padding: 10px 14px;
+  border: 1px solid #ddd0bc;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
 #nav-end-btn {
   padding: 10px 20px;
   border: none;
