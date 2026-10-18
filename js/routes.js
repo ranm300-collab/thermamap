@@ -101,6 +101,11 @@ function formatDistance(meters) {
   return (meters / 1609.34).toFixed(1) + ' mi';
 }
 
+function routeArriveText(route) {
+  const d = new Date(currentDepartureMs() + route.durationMillis);
+  return 'arrive ' + (isTomorrow(d) ? 'tomorrow ' : '') + formatClockTime(d);
+}
+
 const ROUTE_LABELS = ['Route A', 'Route B', 'Route C', 'Route D'];
 const MOBILE_SHEET_PX = 700; // keep in sync w/ the media query in style.css
 let sheetExpanded = false;
@@ -152,7 +157,7 @@ function renderRouteCards() {
 
     const main = document.createElement('div');
     main.className = 'route-card-main';
-    main.textContent = `${formatDuration(route.durationMillis)} · ${formatDistance(route.distanceMeters)}`;
+    main.textContent = `${formatDuration(route.durationMillis)} · ${routeArriveText(route)} · ${formatDistance(route.distanceMeters)}`;
     card.appendChild(main);
 
     const heat = document.createElement('div');
@@ -264,6 +269,7 @@ async function loadRoutes() {
     renderRouteCards();
     fitSelectedRoute();
     scoreAllRoutes();
+    showLeaveHintIfNew();
   } catch (err) {
     console.error('routes request failed', err);
     setRouteError("Couldn't get routes, try again");
@@ -280,3 +286,11 @@ function setMode(mode) {
 
 document.getElementById('mode-walk').addEventListener('click', () => setMode('WALKING'));
 document.getElementById('mode-bike').addEventListener('click', () => setMode('BICYCLING'));
+
+// keeps "arrive 4:37 pm" honest as the clock moves, only matters when following "now"
+function refreshArrivalTimesIfNow() {
+  if (state.leaveTimeMs !== null || !routes.length) return;
+  renderRouteCards();
+}
+
+registerJob('arrival-times', 30 * 1000, refreshArrivalTimesIfNow);

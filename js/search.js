@@ -198,12 +198,16 @@ function isTomorrow(d) {
 }
 
 function leaveLabelText() {
-  if (state.leaveTimeMs === null) return 'Leave: Now';
+  if (state.leaveTimeMs === null) return 'Leaving now';
   const d = new Date(state.leaveTimeMs);
-  return 'Leave: ' + (isTomorrow(d) ? 'tomorrow ' : '') + formatClockTime(d);
+  return 'Leaving ' + (isTomorrow(d) ? 'tomorrow ' : '') + formatClockTime(d);
 }
 
-// used on the cards panel, past-tense framing reads better there than the picker's "Leave:"
+function leaveButtonText() {
+  return leaveLabelText() + ' ▾';
+}
+
+// cards panel wants lowercase, reads into a sentence there instead of standing alone like the button
 function leaveTimeCardsLabel() {
   if (state.leaveTimeMs === null) return 'leaving now';
   const d = new Date(state.leaveTimeMs);
@@ -218,12 +222,36 @@ function closeLeaveTimePicker() {
 
 function setLeaveTime(ms) {
   state.leaveTimeMs = ms;
-  document.getElementById('leave-label-btn').textContent = leaveLabelText();
+  document.getElementById('leave-label-btn').textContent = leaveButtonText();
   closeLeaveTimePicker();
   rescoreAllFromCache();
 }
 
+const LEAVE_HINT_KEY = 'seenLeaveHint';
+
+function leaveHintSeen() {
+  try {
+    return localStorage.getItem(LEAVE_HINT_KEY) === '1';
+  } catch (err) {
+    return false; // private browsing etc, just show the hint every time, no big deal
+  }
+}
+
+function dismissLeaveHint() {
+  document.getElementById('leave-hint').hidden = true;
+  try {
+    localStorage.setItem(LEAVE_HINT_KEY, '1');
+  } catch (err) { /* storage blocked, hint just comes back next visit, fine */ }
+}
+
+// routes.js calls this once a route is actually on screen
+function showLeaveHintIfNew() {
+  if (leaveHintSeen()) return;
+  document.getElementById('leave-hint').hidden = false;
+}
+
 function openLeaveTimePicker() {
+  dismissLeaveHint();
   const input = document.getElementById('leave-time-input');
   const base = state.leaveTimeMs === null ? new Date() : new Date(state.leaveTimeMs);
   input.value = `${pad2(base.getHours())}:${pad2(base.getMinutes())}`;
