@@ -269,7 +269,9 @@ async function loadRoutes() {
       destination: { lat: state.dest.lat, lng: state.dest.lng },
       travelMode: travelMode,
       computeAlternativeRoutes: true,
-      fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels']
+      // legs is for turn by turn during nav (steps w/ maneuver, instructions, distance, endLocation).
+      // the api wont take a narrower dotted path like legs.steps.maneuver, legs is the smallest unit
+      fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels', 'legs']
     });
 
     if (!result.routes.length) {

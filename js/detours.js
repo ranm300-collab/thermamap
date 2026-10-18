@@ -173,7 +173,8 @@ async function requestDetourRoute(candidate) {
     destination: { lat: state.dest.lat, lng: state.dest.lng },
     travelMode: travelMode,
     intermediates: [{ location: { lat: candidate.lat, lng: candidate.lng }, via: true }],
-    fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels']
+    // legs is the smallest field the api takes that includes steps, cant request a narrower path
+    fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels', 'legs']
   });
 }
 
