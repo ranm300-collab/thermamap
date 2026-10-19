@@ -258,7 +258,12 @@ async function openTapPopup(latLng) {
   const pagePoint = latLngToPagePoint(latLng);
   if (pagePoint) positionTapPopup(pagePoint);
 
-  const cell = await getGridCell(latLng.lat(), latLng.lng());
+  let cell = null;
+  try {
+    cell = await getGridCell(latLng.lat(), latLng.lng());
+  } catch (err) {
+    console.error('grid cell fetch failed', err); // popup was stuck on "checking..." forever without this
+  }
   if (requestId !== tapRequestId) return; // closed or tapped elsewhere while this was loading
 
   renderTapPopup(buildTapPopupData(cell));

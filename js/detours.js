@@ -247,7 +247,14 @@ async function findShadyDetour() {
 
   showDetourStatus();
 
-  const cellsFlat = await getGridCells(allPoints);
+  let cellsFlat;
+  try {
+    cellsFlat = await getGridCells(allPoints);
+  } catch (err) {
+    console.error('detour grid lookup failed', err); // status was stuck on "looking for shadier streets" forever without this
+    hideDetourStatus();
+    return;
+  }
   let idx = 0;
   candidates.forEach(c => {
     c.cells = c.areaPoints.map(() => cellsFlat[idx++]);

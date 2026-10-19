@@ -5,7 +5,10 @@ let metaPromise = null
 const chunkCache = new Map()
 
 function loadMeta() {
-  if (!metaPromise) metaPromise = fetch('webdata/grid/meta.json').then(res => res.json())
+  if (!metaPromise) metaPromise = fetch('webdata/grid/meta.json').then(res => {
+    if (!res.ok) throw new Error('grid meta bad status')
+    return res.json()
+  })
   return metaPromise
 }
 
