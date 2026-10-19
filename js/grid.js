@@ -3,6 +3,7 @@
 
 let metaPromise = null
 const chunkCache = new Map()
+const CHUNK_CACHE_MAX = 200 // each chunk's ~146kb decompressed, a long session walking the whole metro shouldn't just keep growing
 
 function loadMeta() {
   if (!metaPromise) metaPromise = fetch('webdata/grid/meta.json').then(res => {
@@ -25,7 +26,12 @@ async function maybeDecompress(buf) {
 
 function loadChunk(col, row) {
   const key = `${col}_${row}`
-  if (chunkCache.has(key)) return chunkCache.get(key)
+  if (chunkCache.has(key)) {
+    const cached = chunkCache.get(key)
+    chunkCache.delete(key)
+    chunkCache.set(key, cached) // bump to most recently used, map keeps insertion order
+    return cached
+  }
 
   const promise = (async () => {
     const res = await fetch(`webdata/grid/${col}_${row}.bin.gz`)
@@ -33,6 +39,7 @@ function loadChunk(col, row) {
     return maybeDecompress(await res.arrayBuffer())
   })()
   chunkCache.set(key, promise)
+  if (chunkCache.size > CHUNK_CACHE_MAX) chunkCache.delete(chunkCache.keys().next().value)
   return promise
 }
 
