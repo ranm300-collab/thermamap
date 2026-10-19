@@ -129,13 +129,31 @@ function positionRouteCardsPanel() {
   panel.style.width = rect.width + 'px';
 }
 
-window.addEventListener('resize', positionRouteCardsPanel);
+// heat-legend is a map control anchored near the bottom too, so on the phone-width bottom
+// sheet it needs to get pushed up above the sheet instead of sitting underneath it
+function positionHeatLegendAboveSheet() {
+  const legend = document.getElementById('heat-legend');
+  const panel = document.getElementById('route-cards-panel');
+  if (!isMobileSheet() || panel.hidden) {
+    legend.style.marginBottom = '';
+    return;
+  }
+  legend.style.marginBottom = (panel.getBoundingClientRect().height + 8) + 'px';
+}
+
+window.addEventListener('resize', () => {
+  positionRouteCardsPanel();
+  positionHeatLegendAboveSheet();
+});
 
 function setSheetExpanded(expanded) {
   sheetExpanded = expanded;
   document.getElementById('route-cards-panel').classList.toggle('expanded', expanded);
   // wait for the sheet's own transition before re-measuring its height
-  setTimeout(fitSelectedRoute, 220);
+  setTimeout(() => {
+    fitSelectedRoute();
+    positionHeatLegendAboveSheet();
+  }, 220);
 }
 
 function renderRouteCards() {
@@ -218,6 +236,9 @@ function renderRouteCards() {
     });
     list.appendChild(card);
   });
+
+  // measured after the cards are actually in the dom, so it accounts for their real height
+  positionHeatLegendAboveSheet();
 }
 
 document.getElementById('route-sheet-handle').addEventListener('click', () => setSheetExpanded(!sheetExpanded));

@@ -43,6 +43,7 @@ function updateLegendVisibility() {
   const legend = document.getElementById('heat-legend');
   legend.hidden = !(heatOn || bothSet);
   legend.classList.toggle('compact', !heatOn && bothSet);
+  positionHeatLegendAboveSheet();
 }
 
 function clearBandTags() {
