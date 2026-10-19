@@ -797,3 +797,23 @@ document.getElementById('nav-steps-list-close').addEventListener('click', e => {
   e.stopPropagation();
   toggleStepsList();
 });
+
+// document.visibilitychange isn't reliable once ios actually suspends the app in the
+// background, @capacitor/app's resume event is the real signal for that. true background
+// navigation (tracking while backgrounded) would need background location permission,
+// skipping that on purpose - this just catches up once the app is back in front
+function initAppResume() {
+  if (!isNativeApp()) return;
+  Capacitor.Plugins.App.addListener('resume', async () => {
+    if (!navActive) {
+      tick();
+      return;
+    }
+    try {
+      const pos = await getCurrentPosition({ enableHighAccuracy: true });
+      handleNavFix(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed, pos.coords.accuracy);
+    } catch (err) { /* next watchPosition fix will catch it up anyway */ }
+  });
+}
+
+initAppResume();
