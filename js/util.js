@@ -13,3 +13,8 @@ async function fetchJson(url, label) {
   if (!res.ok) throw new Error(`${label} bad status`)
   return res.json()
 }
+
+// capacitor injects window.Capacitor inside the ios app shell, never present in a plain browser tab
+function isNativeApp() {
+  return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform())
+}

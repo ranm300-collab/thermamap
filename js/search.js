@@ -53,54 +53,51 @@ function setLocationNotice(msg) {
   el.hidden = false;
 }
 
-function useCurrentLocation() {
+async function useCurrentLocation() {
   const row = document.getElementById('current-location-row');
   row.textContent = 'Finding you...';
   document.getElementById('location-notice').hidden = true;
 
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
+  try {
+    const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
 
-      state.start = { lat, lng, name: 'Current location' };
-      startEl.value = 'Current location';
-      row.textContent = 'Current location';
-      row.hidden = true;
+    state.start = { lat, lng, name: 'Current location' };
+    startEl.value = 'Current location';
+    row.textContent = 'Current location';
+    row.hidden = true;
 
-      if (startMarker) startMarker.setMap(null);
-      startMarker = null;
-      clearHereMarker();
-      hereMarker = new google.maps.Marker({ position: { lat, lng }, map: map, icon: hereIcon(), zIndex: 10 });
-      accuracyCircle = new google.maps.Circle({
-        center: { lat, lng },
-        radius: pos.coords.accuracy,
-        map: map,
-        fillColor: START_COLOR,
-        fillOpacity: 0.12,
-        strokeColor: START_COLOR,
-        strokeOpacity: 0.3,
-        strokeWeight: 1,
-      });
+    if (startMarker) startMarker.setMap(null);
+    startMarker = null;
+    clearHereMarker();
+    hereMarker = new google.maps.Marker({ position: { lat, lng }, map: map, icon: hereIcon(), zIndex: 10 });
+    accuracyCircle = new google.maps.Circle({
+      center: { lat, lng },
+      radius: pos.coords.accuracy,
+      map: map,
+      fillColor: START_COLOR,
+      fillOpacity: 0.12,
+      strokeColor: START_COLOR,
+      strokeOpacity: 0.3,
+      strokeWeight: 1,
+    });
 
-      if (!isInsideMetro(lat, lng)) {
-        setLocationNotice("Looks like you're outside ABQ, routes may be off");
-      }
+    if (!isInsideMetro(lat, lng)) {
+      setLocationNotice("Looks like you're outside ABQ, routes may be off");
+    }
 
-      fitBothPins();
-      loadRoutes();
-      updateHeatMarkers();
-    },
-    err => {
-      row.textContent = 'Current location';
-      if (err.code === err.PERMISSION_DENIED) {
-        setLocationNotice('Location is blocked, type a start instead');
-      } else {
-        setLocationNotice("Couldn't find you, try again or type a start");
-      }
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-  );
+    fitBothPins();
+    loadRoutes();
+    updateHeatMarkers();
+  } catch (err) {
+    row.textContent = 'Current location';
+    if (err.code === err.PERMISSION_DENIED) {
+      setLocationNotice('Location is blocked, type a start instead');
+    } else {
+      setLocationNotice("Couldn't find you, try again or type a start");
+    }
+  }
 }
 
 function fitBothPins() {

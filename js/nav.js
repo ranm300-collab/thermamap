@@ -38,7 +38,7 @@ const NAV_SIM_DRIFT_OFFSET_M = 70; // past both off route thresholds
 
 let navActive = false;
 let navFollowing = true;
-let navWatchId = null;
+let navWatch = null; // {clear()} from js/geo.js, hides whether the id behind it is native or browser-shaped
 let navSimTimer = null;
 let navWakeLock = null;
 let navDragListener = null;
@@ -589,14 +589,14 @@ function onNavPositionError(err) {
 }
 
 function startRealWatch() {
-  if (!navigator.geolocation) {
+  if (!isNativeApp() && !navigator.geolocation) {
     showNavLocationError("This browser can't share your location");
     return;
   }
-  navWatchId = navigator.geolocation.watchPosition(
+  navWatch = watchPosition(
+    { enableHighAccuracy: true },
     pos => handleNavFix(pos.coords.latitude, pos.coords.longitude, pos.coords.heading, pos.coords.speed, pos.coords.accuracy),
-    onNavPositionError,
-    { enableHighAccuracy: true }
+    onNavPositionError
   );
 }
 
@@ -721,9 +721,9 @@ function endNav() {
   navActive = false;
   stopSpeech();
 
-  if (navWatchId !== null) {
-    navigator.geolocation.clearWatch(navWatchId);
-    navWatchId = null;
+  if (navWatch) {
+    navWatch.clear();
+    navWatch = null;
   }
   if (navSimTimer) {
     clearInterval(navSimTimer);
