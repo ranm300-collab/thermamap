@@ -33,46 +33,19 @@ const TUNE_CACHE_KEY = 'tuneRouteCache';
 const TUNE_DETOUR_CACHE_KEY = 'tuneDetourCache'; // separate from the base cache, findShadyDetour makes its own requests
 const TUNE_SNAPSHOT_KEY = 'tuneResultsSnapshot';
 
-function loadTuneCache() {
+function loadTuneJSON(key, fallback) {
   try {
-    return JSON.parse(sessionStorage.getItem(TUNE_CACHE_KEY) || '{}');
+    const raw = sessionStorage.getItem(key);
+    return raw === null ? fallback : JSON.parse(raw);
   } catch (err) {
-    return {};
+    return fallback;
   }
 }
 
-function saveTuneCache(cache) {
+function saveTuneJSON(key, value) {
   try {
-    sessionStorage.setItem(TUNE_CACHE_KEY, JSON.stringify(cache));
-  } catch (err) { /* storage full or blocked, just wont cache between reloads */ }
-}
-
-function loadTuneDetourCache() {
-  try {
-    return JSON.parse(sessionStorage.getItem(TUNE_DETOUR_CACHE_KEY) || '{}');
-  } catch (err) {
-    return {};
-  }
-}
-
-function saveTuneDetourCache(cache) {
-  try {
-    sessionStorage.setItem(TUNE_DETOUR_CACHE_KEY, JSON.stringify(cache));
-  } catch (err) { /* fine, worst case a rerun looks for detours again */ }
-}
-
-function loadTuneSnapshot() {
-  try {
-    return JSON.parse(sessionStorage.getItem(TUNE_SNAPSHOT_KEY) || 'null');
-  } catch (err) {
-    return null;
-  }
-}
-
-function saveTuneSnapshot(results) {
-  try {
-    sessionStorage.setItem(TUNE_SNAPSHOT_KEY, JSON.stringify(results));
-  } catch (err) { /* fine, just no before/after next run */ }
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (err) { /* storage full or blocked, worst case this just doesnt carry over a reload */ }
 }
 
 function tuneLogTable(trip, hour, routesForTrip, scoresForTrip) {
@@ -126,8 +99,8 @@ function compareTuneResults(before, after) {
 
 async function runTuneHarness() {
   console.log('tune harness starting...');
-  const cache = loadTuneCache();
-  const detourCache = loadTuneDetourCache();
+  const cache = loadTuneJSON(TUNE_CACHE_KEY, {});
+  const detourCache = loadTuneJSON(TUNE_DETOUR_CACHE_KEY, {});
   const counter = { count: 0 };
   const results = [];
 
@@ -179,12 +152,12 @@ async function runTuneHarness() {
     }
   }
 
-  saveTuneCache(cache);
-  saveTuneDetourCache(detourCache);
+  saveTuneJSON(TUNE_CACHE_KEY, cache);
+  saveTuneJSON(TUNE_DETOUR_CACHE_KEY, detourCache);
   console.log(`done. ${counter.count} new route requests this run, ${TUNE_TRIPS.length * TUNE_HOURS.length} scenarios total`);
   console.log('--- before/after ---');
-  compareTuneResults(loadTuneSnapshot(), results);
-  saveTuneSnapshot(results);
+  compareTuneResults(loadTuneJSON(TUNE_SNAPSHOT_KEY, null), results);
+  saveTuneJSON(TUNE_SNAPSHOT_KEY, results);
   return results;
 }
 

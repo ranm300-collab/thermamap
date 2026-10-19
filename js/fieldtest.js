@@ -182,24 +182,19 @@ function initFieldTestMode() {
   document.getElementById('fieldtest-save-btn').addEventListener('click', saveFieldReading);
   document.getElementById('fieldtest-export-btn').addEventListener('click', exportFieldCsv);
 
-  document.getElementById('fieldtest-sun-btn').addEventListener('click', () => {
-    fieldSun = 'sun';
-    setToggleActive('#fieldtest-sun-toggle .fieldtest-toggle-btn', 'fieldtest-sun-btn');
+  const sunGroup = '#fieldtest-sun-toggle .fieldtest-toggle-btn';
+  [['fieldtest-sun-btn', 'sun'], ['fieldtest-shade-btn', 'shade']].forEach(([id, value]) => {
+    document.getElementById(id).addEventListener('click', () => {
+      fieldSun = value;
+      setToggleActive(sunGroup, id);
+    });
   });
-  document.getElementById('fieldtest-shade-btn').addEventListener('click', () => {
-    fieldSun = 'shade';
-    setToggleActive('#fieldtest-sun-toggle .fieldtest-toggle-btn', 'fieldtest-shade-btn');
-  });
-  document.getElementById('fieldtest-hotter-btn').addEventListener('click', () => {
-    fieldRelative = 'hotter';
-    setToggleActive('#fieldtest-relative-toggle .fieldtest-toggle-btn', 'fieldtest-hotter-btn');
-  });
-  document.getElementById('fieldtest-same-btn').addEventListener('click', () => {
-    fieldRelative = 'same';
-    setToggleActive('#fieldtest-relative-toggle .fieldtest-toggle-btn', 'fieldtest-same-btn');
-  });
-  document.getElementById('fieldtest-cooler-btn').addEventListener('click', () => {
-    fieldRelative = 'cooler';
-    setToggleActive('#fieldtest-relative-toggle .fieldtest-toggle-btn', 'fieldtest-cooler-btn');
+
+  const relativeGroup = '#fieldtest-relative-toggle .fieldtest-toggle-btn';
+  [['fieldtest-hotter-btn', 'hotter'], ['fieldtest-same-btn', 'same'], ['fieldtest-cooler-btn', 'cooler']].forEach(([id, value]) => {
+    document.getElementById(id).addEventListener('click', () => {
+      fieldRelative = value;
+      setToggleActive(relativeGroup, id);
+    });
   });
 }
