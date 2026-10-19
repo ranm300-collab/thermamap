@@ -680,7 +680,7 @@ function recenterNav() {
 }
 
 async function startNav() {
-  if (!routes.length) return;
+  if (!routes.length || navActive) return; // double tap on Start was adding a second dragstart listener
   // ios safari only allows speech started directly from a tap, so this is said right here
   // to "unlock" it, otherwise later announcements (turns, rerouting) would just stay silent
   speak('Starting route');
