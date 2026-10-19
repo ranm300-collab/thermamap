@@ -248,8 +248,15 @@ function toggleVoice() {
   if (!navVoiceOn) stopSpeech();
 }
 
+// not tied to the voice toggle on purpose, a quiet tap is welcome even w/ voice off
+function haptic(style) {
+  if (!isNativeApp()) return;
+  Capacitor.Plugins.Haptics.impact({ style }).catch(() => {});
+}
+
 function speakTurn(step, distRemaining) {
   speak(`In ${speechDistance(distRemaining)}, ${lowerFirst(speechify(cleanInstruction(step)))}`);
+  haptic('LIGHT');
 }
 
 // builds the per-step distance-along-route markers once, reusing the same scored samples
@@ -392,6 +399,7 @@ function checkArrival(lat, lng) {
 
   navArrived = true;
   speak('You have arrived');
+  haptic('MEDIUM');
   if (navStepsListOpen) toggleStepsList();
   document.getElementById('nav-instruction-arrow').innerHTML = maneuverArrow('DESTINATION');
   document.getElementById('nav-instruction-distance').textContent = "You've arrived";
@@ -652,7 +660,18 @@ function startSimNav() {
   }, SIM_STEP_MS);
 }
 
+// @capacitor-community/keep-awake inside the app, the browser's own Screen Wake Lock api
+// otherwise - the wake lock api doesn't work reliably in a wkwebview, this plugin does
 async function acquireWakeLock() {
+  if (isNativeApp()) {
+    try {
+      await Capacitor.Plugins.KeepAwake.keepAwake();
+      navWakeLock = 'native';
+    } catch (err) {
+      navWakeLock = null;
+    }
+    return;
+  }
   try {
     navWakeLock = await navigator.wakeLock.request('screen');
   } catch (err) {
@@ -662,6 +681,11 @@ async function acquireWakeLock() {
 
 async function releaseWakeLock() {
   if (!navWakeLock) return;
+  if (navWakeLock === 'native') {
+    try { await Capacitor.Plugins.KeepAwake.allowSleep(); } catch (err) { /* already gone, fine */ }
+    navWakeLock = null;
+    return;
+  }
   try {
     await navWakeLock.release();
   } catch (err) { /* already gone, fine */ }
