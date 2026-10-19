@@ -187,7 +187,7 @@ function renderTapPopup(data) {
   if (data.loading) {
     const line = document.createElement('div');
     line.className = 'tap-popup-loading';
-    line.textContent = 'checking...';
+    line.textContent = 'Checking...';
     content.appendChild(line);
     return;
   }

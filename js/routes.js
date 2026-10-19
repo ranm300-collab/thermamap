@@ -110,6 +110,20 @@ const ROUTE_LABELS = ['Route A', 'Route B', 'Route C', 'Route D'];
 const MOBILE_SHEET_PX = 700; // keep in sync w/ the media query in style.css
 let sheetExpanded = false;
 
+const LONG_WALK_MIN = 45;
+const LONG_WALK_HOT_F = 90;
+
+// nudge, not a nag - only for a genuinely long walk when its also actually hot out
+function longHotWalkNote(route) {
+  if (travelMode !== 'WALKING' || route.durationMillis / 60000 < LONG_WALK_MIN) return null;
+  const feels = state.weather.feelsLike;
+  const bannerShowing = !document.getElementById('alert-banner').hidden;
+  if ((feels !== null && feels >= LONG_WALK_HOT_F) || bannerShowing) {
+    return "That's a long walk in this heat, biking or the bus might be safer";
+  }
+  return null;
+}
+
 function isMobileSheet() {
   return window.matchMedia(`(max-width: ${MOBILE_SHEET_PX}px)`).matches;
 }
@@ -217,6 +231,14 @@ function renderRouteCards() {
     }
 
     if (i === selectedRouteIndex) {
+      const heatNote = longHotWalkNote(route);
+      if (heatNote) {
+        const heatNoteEl = document.createElement('div');
+        heatNoteEl.className = 'route-card-heat-note';
+        heatNoteEl.textContent = heatNote;
+        card.appendChild(heatNoteEl);
+      }
+
       const tip = betterLeaveTimeTip(i);
       if (tip) {
         const tipEl = document.createElement('div');
@@ -273,6 +295,19 @@ function setRouteError(msg) {
   el.hidden = false;
 }
 
+function showRouteLoading() {
+  const panel = document.getElementById('route-cards-panel');
+  panel.hidden = false;
+  positionRouteCardsPanel();
+  document.getElementById('leave-time-label').textContent = '';
+  const list = document.getElementById('route-cards');
+  list.innerHTML = '';
+  const loading = document.createElement('div');
+  loading.className = 'route-loading';
+  loading.textContent = 'Finding the best route...';
+  list.appendChild(loading);
+}
+
 async function loadRoutes() {
   if (!state.start || !state.dest) return;
 
@@ -282,6 +317,7 @@ async function loadRoutes() {
   userPickedRoute = false;
   sheetExpanded = false;
   document.getElementById('route-cards-panel').classList.remove('expanded');
+  showRouteLoading();
 
   try {
     const { Route } = await google.maps.importLibrary('routes');
@@ -312,6 +348,7 @@ async function loadRoutes() {
     showLeaveHintIfNew();
   } catch (err) {
     console.error('routes request failed', err);
+    document.getElementById('route-cards-panel').hidden = true;
     setRouteError("Couldn't get routes, try again");
   }
 }

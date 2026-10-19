@@ -302,7 +302,7 @@ async function initSearch() {
     locationRow.addEventListener('click', useCurrentLocation);
 
     destEl = new PlaceAutocompleteElement();
-    destEl.placeholder = 'Where to?';
+    destEl.placeholder = 'Where are you headed?';
     destEl.locationRestriction = METRO_BOUNDS;
     destEl.includedRegionCodes = ['us'];
     document.getElementById('dest-slot').appendChild(destEl);
