@@ -292,7 +292,10 @@ async function initSearch() {
     // focusin/focusout cross the shadow boundry, plain focus/blur dont
     const locationRow = document.getElementById('current-location-row');
     startEl.addEventListener('focusin', () => { locationRow.hidden = false; });
-    startEl.addEventListener('focusout', () => { locationRow.hidden = true; });
+    startEl.addEventListener('focusout', e => {
+      if (e.relatedTarget === locationRow) return; // tabbing into the button, dont yank it away
+      locationRow.hidden = true;
+    });
     startEl.addEventListener('input', () => {
       locationRow.hidden = true;
       clearHereMarker();

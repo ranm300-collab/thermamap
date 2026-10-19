@@ -35,7 +35,7 @@ async function loadWeather() {
     const feels = data.feelsLikeTemperature.degrees;
     const uv = data.uvIndex;
     document.getElementById('temp-now').textContent = Math.round(f) + '°F';
-    document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · uv ${uv}`;
+    document.getElementById('temp-detail').textContent = `feels ${Math.round(feels)}° · UV ${uv}`;
     state.weather.feelsLike = feels;
     state.weather.uv = uv;
     state.weather.readingTime = new Date(data.currentTime);
@@ -96,7 +96,7 @@ function getEffectiveFeelsLike() {
 
 function buildHeatTips() {
   const tips = HEAT_TIPS.slice();
-  if (state.weather.uv !== null && state.weather.uv >= 8) tips.push('uv is brutal today too, shade matters more than usual');
+  if (state.weather.uv !== null && state.weather.uv >= 8) tips.push('UV is brutal today too, shade matters more than usual');
   return tips.join('\n');
 }
 

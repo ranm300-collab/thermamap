@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ThermaMap</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="style.css">
@@ -16,10 +16,10 @@
     <span id="wx-time"></span>
   </div>
 </header>
-<div id="alert-banner" hidden>
+<button type="button" id="alert-banner" hidden>
   <div id="alert-headline"></div>
   <div id="alert-instruction"></div>
-</div>
+</button>
 <div id="nav-instruction" hidden>
   <div id="nav-instruction-arrow"></div>
   <div id="nav-instruction-body">
@@ -66,22 +66,22 @@
       <span class="heat-band-range">above +6°</span>
     </div>
   </div>
-  <div id="heat-marker-start-nodata" class="heat-marker-nodata" hidden>start: no heat data here</div>
-  <div id="heat-marker-dest-nodata" class="heat-marker-nodata" hidden>dest: no heat data here</div>
+  <div id="heat-marker-start-nodata" class="heat-marker-nodata" hidden>Start: no heat data here</div>
+  <div id="heat-marker-dest-nodata" class="heat-marker-nodata" hidden>Dest: no heat data here</div>
   <div id="heat-legend-caption">vs typical ABQ ground, from NASA/USGS Landsat</div>
 </div>
 
 <div id="tap-popup" hidden>
-  <button type="button" id="tap-popup-close">×</button>
+  <button type="button" id="tap-popup-close" aria-label="Close">×</button>
   <div id="tap-popup-content"></div>
 </div>
 
 <div id="search-card" hidden>
   <div id="start-slot"></div>
-  <div id="current-location-row" hidden>Current location</div>
-  <button id="swap-btn" type="button">⇅ swap</button>
+  <button type="button" id="current-location-row" hidden>Current location</button>
+  <button id="swap-btn" type="button">⇅ Swap</button>
   <div id="dest-slot"></div>
-  <div id="search-error" hidden>search isn't loading right now</div>
+  <div id="search-error" hidden>Search isn't loading right now</div>
   <div id="location-notice" hidden></div>
   <div id="mode-toggle">
     <button type="button" id="mode-walk" class="mode-btn active">Walk</button>
@@ -125,7 +125,7 @@
 <div id="nav-steps-list" hidden>
   <div id="nav-steps-list-header">
     <span>Remaining steps</span>
-    <button type="button" id="nav-steps-list-close">×</button>
+    <button type="button" id="nav-steps-list-close" aria-label="Close">×</button>
   </div>
   <div id="nav-steps-list-items"></div>
 </div>

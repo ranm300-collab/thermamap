@@ -1,7 +1,11 @@
 :root {
   --bg: #f4ede0;
   --text: #2b2620;
-  --accent: #c15a3c;
+  --accent: #b55538; /* nudged a touch darker so button text clears AA contrast */
+  /* same hue, darker - the bright accent doesn't hit AA contrast as small text */
+  --accent-text: #8f4330;
+  /* was two shades (7a7264/a39c8c), the lighter one never hit AA so just one muted tone now */
+  --muted: #5f594e;
 }
 
 * {
@@ -18,6 +22,27 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  font-family: inherit;
+}
+
+#heat-toggle, .mode-btn, .route-card, #current-location-row {
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {
@@ -41,7 +66,7 @@ body {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 #wx {
@@ -58,13 +83,13 @@ body {
 #temp-detail {
   display: block;
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #wx-time {
   display: block;
   font-size: 0.7rem;
-  color: #a39c8c;
+  color: var(--muted);
 }
 
 /* during nav the instruction card needs the room, drop down to just the temp */
@@ -113,13 +138,13 @@ body {
 #nav-instruction-then {
   margin-top: 2px;
   font-size: 0.8rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #nav-instruction-heat {
   margin-top: 2px;
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #map {
@@ -187,7 +212,7 @@ body {
 #heat-band-4 .heat-band-swatch { background: #9c2b1f; }
 
 .heat-band-range {
-  color: #a39c8c;
+  color: var(--muted);
 }
 
 .heat-band-markers {
@@ -199,7 +224,7 @@ body {
 .heat-band-marker {
   font-size: 0.6rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 #heat-legend.compact .heat-band-range {
@@ -209,7 +234,7 @@ body {
 .heat-marker-nodata {
   margin-top: 4px;
   font-size: 0.65rem;
-  color: #7a7264;
+  color: var(--muted);
   text-align: center;
 }
 
@@ -220,7 +245,7 @@ body {
 #heat-legend-caption {
   margin-top: 6px;
   font-size: 0.7rem;
-  color: #7a7264;
+  color: var(--muted);
   text-align: center;
 }
 
@@ -252,22 +277,27 @@ body {
 
 #search-error {
   font-size: 0.85rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #current-location-row {
+  display: block;
+  width: 100%;
   padding: 10px;
   margin-bottom: 8px;
+  border: none;
   border-radius: 6px;
   background: #efe6d6;
+  font-family: inherit;
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--accent-text);
+  text-align: left;
   cursor: pointer;
 }
 
 #location-notice {
   font-size: 0.85rem;
-  color: #7a7264;
+  color: var(--muted);
   margin-bottom: 8px;
 }
 
@@ -303,7 +333,7 @@ body {
   margin-top: -4px;
   margin-bottom: 8px;
   font-size: 0.7rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #leave-label-btn, #leave-reset-btn {
@@ -322,12 +352,12 @@ body {
   border-radius: 6px;
   background: var(--bg);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1rem; /* under 16px and iphone zooms in on focus */
 }
 
 #leave-time-label {
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
   margin-bottom: 8px;
 }
 
@@ -351,14 +381,14 @@ body {
 #detour-status {
   margin-top: 8px;
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-loading {
   padding: 20px 0;
   text-align: center;
   font-size: 0.9rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-card {
@@ -383,7 +413,7 @@ body {
 
 .route-card-label {
   font-size: 0.7rem;
-  color: #a39c8c;
+  color: var(--muted);
 }
 
 .route-card-main {
@@ -395,33 +425,40 @@ body {
 .route-card-heat {
   margin-top: 4px;
   font-size: 0.8rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-card-tag {
   margin-top: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .route-card-compare {
   margin-top: 4px;
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-card-tip {
+  display: block;
   margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
   font-size: 0.75rem;
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
 }
 
 .route-card-heat-note {
   margin-top: 6px;
   font-size: 0.75rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-card-start-btn {
@@ -440,7 +477,7 @@ body {
   gap: 12px;
   margin-top: 10px;
   font-size: 0.7rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .route-color-key-item {
@@ -497,6 +534,21 @@ body {
   #route-cards-panel:not(.expanded) #route-color-key {
     display: none;
   }
+
+  /* real tap targets on a phone, even for the small icon-only ones */
+  #heat-toggle, .mode-btn, #leave-label-btn, #leave-reset-btn, #current-location-row,
+  #swap-btn, .route-card-start-btn, #nav-end-btn, #nav-voice-toggle, #nav-recenter-btn,
+  #nav-location-exit-btn, #alert-banner {
+    min-height: 44px;
+  }
+
+  #tap-popup-close, #nav-steps-list-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 #tap-popup {
@@ -515,7 +567,7 @@ body {
   right: 6px;
   border: none;
   background: none;
-  color: #7a7264;
+  color: var(--muted);
   font-size: 1.1rem;
   line-height: 1;
   padding: 4px;
@@ -528,25 +580,31 @@ body {
 
 .tap-popup-loading, .tap-popup-nodata {
   font-size: 0.85rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 .tap-popup-footnote {
   margin-top: 4px;
   font-size: 0.65rem;
-  color: #a39c8c;
+  color: var(--muted);
 }
 
 #route-error {
   font-size: 0.85rem;
-  color: #7a7264;
+  color: var(--muted);
   margin-top: 4px;
 }
 
 #alert-banner {
+  display: block;
+  width: 100%;
   flex: 0 0 auto;
   padding: 10px 16px;
+  border: none;
+  background: var(--bg);
+  font-family: inherit;
   font-size: 0.9rem;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -620,7 +678,7 @@ body {
 #nav-reroute-status {
   margin-top: 2px;
   font-size: 0.8rem;
-  color: #7a7264;
+  color: var(--muted);
 }
 
 #nav-bar-buttons {
@@ -659,7 +717,7 @@ body {
   border: none;
   border-radius: 20px;
   background: var(--bg);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.9rem;
   font-weight: 600;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
@@ -715,7 +773,7 @@ body {
 #nav-steps-list-close {
   border: none;
   background: none;
-  color: #7a7264;
+  color: var(--muted);
   font-size: 1.3rem;
   line-height: 1;
   padding: 4px;
@@ -749,5 +807,5 @@ body {
 .nav-steps-list-dist {
   flex: 0 0 auto;
   font-size: 0.8rem;
-  color: #7a7264;
+  color: var(--muted);
 }

@@ -181,6 +181,8 @@ function renderRouteCards() {
   routes.forEach((route, i) => {
     const card = document.createElement('div');
     card.className = 'route-card' + (i === selectedRouteIndex ? ' selected' : '');
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
 
     const top = document.createElement('div');
     top.className = 'route-card-top';
@@ -241,7 +243,8 @@ function renderRouteCards() {
 
       const tip = betterLeaveTimeTip(i);
       if (tip) {
-        const tipEl = document.createElement('div');
+        const tipEl = document.createElement('button');
+        tipEl.type = 'button';
         tipEl.className = 'route-card-tip';
         tipEl.textContent = tip.text;
         tipEl.addEventListener('click', e => {
@@ -252,9 +255,15 @@ function renderRouteCards() {
       }
     }
 
-    card.addEventListener('click', () => {
+    const pickThisCard = () => {
       selectRouteByUser(i);
       if (!sheetExpanded) setSheetExpanded(true);
+    };
+    card.addEventListener('click', pickThisCard);
+    card.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault(); // space would otherwise scroll the sheet
+      pickThisCard();
     });
     list.appendChild(card);
   });
