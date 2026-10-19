@@ -4,3 +4,5 @@ CLAUDE.md
 .claude/
 .venv/
 __pycache__/
+node_modules/
+www/

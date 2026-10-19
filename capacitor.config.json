@@ -1,0 +1,8 @@
+{
+  "appId": "com.moosarana.thermamap",
+  "appName": "ThermaMap",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}
