@@ -225,12 +225,18 @@ function speechify(text) {
   return SPEECH_SUFFIXES.reduce((out, [pattern, word]) => out.replace(pattern, word), text);
 }
 
-function speechOk() {
-  return navVoiceOn && 'speechSynthesis' in window;
-}
-
+// the web speech api is safari-only - wkwebview (what capacitor uses) doesn't get it, so
+// the app uses @capacitor-community/text-to-speech there instead. browser keeps speechSynthesis
 function speak(text) {
-  if (!speechOk()) return;
+  if (!navVoiceOn) return;
+  if (isNativeApp()) {
+    Capacitor.Plugins.TextToSpeech.stop()
+      .catch(() => {})
+      .then(() => Capacitor.Plugins.TextToSpeech.speak({ text }))
+      .catch(() => {});
+    return;
+  }
+  if (!('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel(); // newest announcement wins, dont let them stack up
     speechSynthesis.speak(new SpeechSynthesisUtterance(text));
@@ -238,6 +244,10 @@ function speak(text) {
 }
 
 function stopSpeech() {
+  if (isNativeApp()) {
+    Capacitor.Plugins.TextToSpeech.stop().catch(() => {});
+    return;
+  }
   if (!('speechSynthesis' in window)) return;
   try { speechSynthesis.cancel(); } catch (err) { /* nothing to stop, fine */ }
 }
