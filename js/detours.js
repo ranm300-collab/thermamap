@@ -211,7 +211,7 @@ function routeOverlapFraction(raw, otherRaws) {
 function pickBestDetour(results, fastestDurationMs, bestExistingScore, existingRaws) {
   const viable = results.filter(Boolean).filter(r => {
     if (r.score.coverage < MIN_COVERAGE) return false;
-    if (r.route.durationMillis > fastestDurationMs * MAX_DETOUR_RATIO) return false;
+    if (r.route.durationMillis > maxAllowedDurationMs(fastestDurationMs)) return false;
     if (r.score.score > bestExistingScore * (1 - DETOUR_MIN_SCORE_IMPROVEMENT)) return false;
     if (routeOverlapFraction(r.raw, existingRaws) > DETOUR_MAX_OVERLAP_FRAC) return false;
     return true;

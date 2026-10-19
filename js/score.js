@@ -4,6 +4,7 @@ const SAMPLE_SPACING_M = 10;
 const SUN_UP_HOUR = 7; // sun's basically not up before this, call it shaded
 const SUN_DOWN_HOUR = 19; // our hourly shade data stops at 19:00
 const MAX_DETOUR_RATIO = 1.5; // won't win coolest if its way slower than the fastest route
+const MAX_DETOUR_EXTRA_MS = 20 * 60000; // ...or if its just flat out more than 20 min extra, whichever is smaller
 const MIN_COVERAGE = 0.5; // need data for at least half the route to trust the score
 const HEAT_FACTOR_DIVISOR = 30; // hotter than avg ground counts extra, tune later once we've walked some routes
 // TODO: shade data is baked for a july 15 sun angle, prob off by winter
@@ -221,7 +222,7 @@ function pickCoolestRoute() {
   routes.forEach((route, i) => {
     const s = routeScores[i];
     if (!s || s.coverage < MIN_COVERAGE) return;
-    if (route.durationMillis > fastestMs * MAX_DETOUR_RATIO) return;
+    if (route.durationMillis > maxAllowedDurationMs(fastestMs)) return;
     if (s.score < bestScore) {
       bestScore = s.score;
       bestIndex = i;
@@ -236,6 +237,12 @@ function pickCoolestRoute() {
   } else {
     selectRoute(bestIndex);
   }
+}
+
+// 1.5x alone was way too loose on long trips, a 4hr walk could pick a route 2hrs longer.
+// capped at whichever is smaller so short trips still get some slack
+function maxAllowedDurationMs(fastestMs) {
+  return Math.min(fastestMs * MAX_DETOUR_RATIO, fastestMs + MAX_DETOUR_EXTRA_MS);
 }
 
 function fastestRouteIndex() {

@@ -434,7 +434,7 @@ async function applyReroute(newRoutes) {
   let bestIndex = 0, bestScore = Infinity;
   scores.forEach((s, i) => {
     if (s.coverage < MIN_COVERAGE) return;
-    if (newRoutes[i].durationMillis > fastestMs * MAX_DETOUR_RATIO) return;
+    if (newRoutes[i].durationMillis > maxAllowedDurationMs(fastestMs)) return;
     if (s.score < bestScore) { bestScore = s.score; bestIndex = i; }
   });
 
