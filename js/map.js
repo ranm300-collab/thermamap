@@ -44,6 +44,7 @@ function initMap() {
   });
   initSearch();
   initHeatLayer();
+  initTuneMode();
 }
 
 function loadMapsScript() {
