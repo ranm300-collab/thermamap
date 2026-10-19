@@ -130,6 +130,38 @@
   <div id="nav-steps-list-items"></div>
 </div>
 
+<button id="fieldtest-log-btn" type="button" hidden>Log a reading</button>
+<button id="fieldtest-panel-btn" type="button" hidden>Field log</button>
+<div id="fieldtest-form" hidden>
+  <div id="fieldtest-form-header">
+    <span>Log a reading</span>
+    <button type="button" id="fieldtest-form-close" aria-label="Close">×</button>
+  </div>
+  <label for="fieldtest-temp">Measured temp, °F (optional)</label>
+  <input type="number" id="fieldtest-temp" inputmode="decimal">
+  <div id="fieldtest-sun-toggle" class="fieldtest-toggle-row">
+    <button type="button" id="fieldtest-sun-btn" class="fieldtest-toggle-btn active">Sun</button>
+    <button type="button" id="fieldtest-shade-btn" class="fieldtest-toggle-btn">Shade</button>
+  </div>
+  <div id="fieldtest-relative-toggle" class="fieldtest-toggle-row">
+    <button type="button" id="fieldtest-hotter-btn" class="fieldtest-toggle-btn">Hotter</button>
+    <button type="button" id="fieldtest-same-btn" class="fieldtest-toggle-btn active">About the same</button>
+    <button type="button" id="fieldtest-cooler-btn" class="fieldtest-toggle-btn">Cooler</button>
+  </div>
+  <input type="text" id="fieldtest-note" placeholder="Note (optional)" maxlength="140">
+  <button type="button" id="fieldtest-save-btn">Save reading</button>
+  <div id="fieldtest-status" hidden></div>
+</div>
+<div id="fieldtest-panel" hidden>
+  <div id="fieldtest-panel-header">
+    <span>Field log</span>
+    <button type="button" id="fieldtest-panel-close" aria-label="Close">×</button>
+  </div>
+  <div id="fieldtest-summary"></div>
+  <div id="fieldtest-list"></div>
+  <button type="button" id="fieldtest-export-btn">Export CSV</button>
+</div>
+
 <script src="js/state.js" defer></script>
 <script src="js/util.js" defer></script>
 <script src="js/config.js" defer></script>
@@ -143,6 +175,7 @@
 <script src="js/score.js" defer></script>
 <script src="js/detours.js" defer></script>
 <script src="js/tune.js" defer></script>
+<script src="js/fieldtest.js" defer></script>
 <script src="js/nav.js" defer></script>
 </body>
 </html>

@@ -45,6 +45,7 @@ function initMap() {
   initSearch();
   initHeatLayer();
   initTuneMode();
+  initFieldTestMode();
 }
 
 function loadMapsScript() {
