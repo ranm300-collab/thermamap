@@ -24,9 +24,12 @@ html, body {
   overflow: hidden;
 }
 
-button {
+button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+}
+
+button {
   font-family: inherit;
 }
 
