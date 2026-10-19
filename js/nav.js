@@ -423,7 +423,7 @@ function showRerouting() {
   document.getElementById('nav-instruction').hidden = false;
 }
 
-// same scoring rules as a fresh search (fetchRouteRawData/computeRouteScore/MAX_DETOUR_RATIO/
+// same scoring rules as a fresh search (fetchRouteRawData/computeRouteScore/maxAllowedDurationMs/
 // MIN_COVERAGE all come from score.js), just without touching the route cards ui nav hides
 async function applyReroute(newRoutes) {
   const raws = await Promise.all(newRoutes.map(route => fetchRouteRawData(route)));
