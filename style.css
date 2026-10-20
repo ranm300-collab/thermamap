@@ -573,21 +573,30 @@ body {
 
 #route-color-key {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-top: 10px;
-  font-size: 0.7rem;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0d6c4;
+  font-size: 0.75rem;
   color: var(--muted);
+}
+
+#route-color-key-title {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .route-color-key-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .route-color-key-bar {
-  width: 16px;
-  height: 4px;
+  width: 18px;
+  height: 5px;
   border-radius: 2px;
 }
 
@@ -836,12 +845,18 @@ body {
 
 @media (max-width: 420px) {
   #heat-legend {
-    width: 260px;
+    width: 280px;
     padding: 6px 10px;
   }
 
+  /* labels were close to unreadable at 0.56rem, bumped up and widened the legend to fit it */
   .heat-band, .heat-band-marker {
-    font-size: 0.56rem;
+    font-size: 0.66rem;
+  }
+
+  .heat-band-swatch {
+    width: 18px;
+    height: 18px;
   }
 
   /* not enough room once labels wrap, the swatch colors still read fine */
