@@ -367,17 +367,21 @@ function rescoreAllFromCache() {
 
 async function scoreAllRoutes() {
   if (!routes.length) return;
+  const requestId = routeRequestId;
   scoring = true;
   coolestIndex = -1;
   routeRawData = [];
   renderRouteCards();
 
   try {
-    routeRawData = await Promise.all(routes.map(route => fetchRouteRawData(route)));
+    const raw = await Promise.all(routes.map(route => fetchRouteRawData(route)));
+    if (requestId !== routeRequestId) return; // route got cleared/replaced while this was fetching
+    routeRawData = raw;
     scoring = false;
     rescoreAllFromCache();
     findShadyDetour(); // new search only, leave time changes just rescore what we already found
   } catch (err) {
+    if (requestId !== routeRequestId) return;
     console.error('route scoring failed', err);
     scoring = false;
     renderRouteCards();

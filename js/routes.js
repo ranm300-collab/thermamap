@@ -7,6 +7,7 @@ let travelMode = 'WALKING';
 let routes = [];
 let selectedRouteIndex = 0;
 let routePolylines = [];
+let routeRequestId = 0; // bumped on every new search and on clear, late async results check this and bail
 
 function clearRoutePolylines() {
   routePolylines.forEach(lines => {
@@ -319,6 +320,7 @@ function showRouteLoading() {
 
 async function loadRoutes() {
   if (!state.start || !state.dest) return;
+  const requestId = ++routeRequestId;
 
   document.getElementById('route-error').hidden = true;
   routeScores = [];
@@ -339,6 +341,7 @@ async function loadRoutes() {
       // the api wont take a narrower dotted path like legs.steps.maneuver, legs is the smallest unit
       fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels', 'legs']
     });
+    if (requestId !== routeRequestId) return; // route got cleared or another search started while this was in flight
 
     if (!result.routes.length) {
       clearRoutePolylines();
@@ -355,7 +358,9 @@ async function loadRoutes() {
     fitSelectedRoute();
     scoreAllRoutes();
     showLeaveHintIfNew();
+    setSearchExpanded(false);
   } catch (err) {
+    if (requestId !== routeRequestId) return;
     console.error('routes request failed', err);
     document.getElementById('route-cards-panel').hidden = true;
     setRouteError("Couldn't get routes, try again");

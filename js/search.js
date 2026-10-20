@@ -123,7 +123,43 @@ function setSearchExpanded(expanded) {
   if (!expanded) updateSearchPillText();
 }
 
+// everything that depends on having a start+dest pair - routes, scores, detours, the
+// legend tags, the bottom sheet. gets called whenever either end goes away, not just a full clear
+function clearRouteDisplay() {
+  routeRequestId++; // anything already in flight (scoring, detours) should ignore its own result now
+  clearRoutePolylines();
+  clearDetourMarkers();
+  hideDetourStatus();
+  routes = [];
+  routeScores = [];
+  routeRawData = [];
+  coolestIndex = -1;
+  userPickedRoute = false;
+  selectedRouteIndex = 0;
+  document.getElementById('route-cards').innerHTML = '';
+  document.getElementById('route-cards-panel').hidden = true;
+  document.getElementById('route-error').hidden = true;
+  setSheetState('collapsed');
+  clearBandTags();
+  updateHeatMarkers();
+}
+
+// full reset - both locations, their pins, and anything route related. back to a clean map
+function clearRoute() {
+  state.start = null;
+  state.dest = null;
+  if (startEl) startEl.value = '';
+  if (destEl) destEl.value = '';
+  clearHereMarker();
+  if (startMarker) { startMarker.setMap(null); startMarker = null; }
+  if (destMarker) { destMarker.setMap(null); destMarker = null; }
+  clearRouteDisplay();
+  setSearchExpanded(false);
+  updateSearchPillText();
+}
+
 document.getElementById('search-pill').addEventListener('click', () => setSearchExpanded(true));
+document.getElementById('search-card-close').addEventListener('click', clearRoute);
 
 // tap anywhere outside the open panel to collapse it back to the pill (doesn't clear anything,
 // setStartPlace/setDestPlace already updated state.start/dest if a real pick happened)
@@ -322,6 +358,12 @@ async function initSearch() {
     startEl.addEventListener('input', () => {
       locationRow.hidden = true;
       clearHereMarker();
+      // field went empty - stale pin/route for the old start shouldn't stick around
+      if (startEl.value === '' && state.start) {
+        state.start = null;
+        if (startMarker) { startMarker.setMap(null); startMarker = null; }
+        clearRouteDisplay();
+      }
     });
     // without this the row blurs before the click lands, mousedown fires first
     locationRow.addEventListener('mousedown', e => e.preventDefault());
@@ -333,6 +375,13 @@ async function initSearch() {
     destEl.includedRegionCodes = ['us'];
     document.getElementById('dest-slot').appendChild(destEl);
     wireAutocomplete(destEl, setDestPlace);
+    destEl.addEventListener('input', () => {
+      if (destEl.value === '' && state.dest) {
+        state.dest = null;
+        if (destMarker) { destMarker.setMap(null); destMarker = null; }
+        clearRouteDisplay();
+      }
+    });
 
     // top left so it stays clear of the zoom buttons. one container pushed in, not two -
     // maps lays out multiple pushed elements side by side instead of letting them overlap

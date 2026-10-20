@@ -232,6 +232,7 @@ function addDetourRoute(best) {
 
 async function findShadyDetour() {
   if (navActive) return; // only ever runs from a fresh search anyway, but just in case
+  const requestId = routeRequestId;
   clearDetourMarkers();
   hideDetourStatus();
   if (!state.start || !state.dest) return;
@@ -255,6 +256,7 @@ async function findShadyDetour() {
     hideDetourStatus();
     return;
   }
+  if (requestId !== routeRequestId) return; // route got cleared/replaced while that was in flight
   let idx = 0;
   candidates.forEach(c => {
     c.cells = c.areaPoints.map(() => cellsFlat[idx++]);
@@ -279,6 +281,7 @@ async function findShadyDetour() {
 
   const results = await Promise.all(kept.slice(0, DETOUR_MAX_REQUESTS).map(requestAndScoreDetour));
   hideDetourStatus();
+  if (requestId !== routeRequestId) return;
   const best = pickBestDetour(results, fastestRoute.durationMillis, bestExistingScore, existingRaws);
   if (best) addDetourRoute(best);
 }
