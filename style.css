@@ -161,6 +161,11 @@ body {
   flex: 1;
 }
 
+/* fullscreenControl: false in map.js doesn't actually hide this on its own, gotta nuke it w/ css too */
+.gm-fullscreen-control {
+  display: none !important;
+}
+
 #heat-toggle {
   padding: 10px 14px;
   border: none;

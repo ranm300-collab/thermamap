@@ -40,7 +40,8 @@ function initMap() {
     backgroundColor: '#e8e0d0',
     styles: MAP_STYLE,
     mapTypeControl: false,
-    streetViewControl: false
+    streetViewControl: false,
+    fullscreenControl: false // does nothing useful here, esp inside the iphone app
   });
   initSearch();
   initHeatLayer();
