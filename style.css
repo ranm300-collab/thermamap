@@ -447,7 +447,7 @@ body {
   overflow-y: auto;
 }
 
-#route-sheet-handle {
+.sheet-grip, #route-peek-bar, #route-sheet-header {
   display: none;
 }
 
@@ -612,7 +612,7 @@ body {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
     padding: 6px 14px calc(env(safe-area-inset-bottom) + 10px);
     /* transform not max-height, so dragging the handle doesn't fight layout every frame */
-    transform: translateY(calc(100% - 34px));
+    transform: translateY(calc(100% - 64px));
     transition: transform 280ms ease;
   }
 
@@ -624,27 +624,114 @@ body {
     transform: translateY(0);
   }
 
-  #route-sheet-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 28px; /* visual bar is thin, but the tap/drag target is a real 44pt-ish strip */
-    margin-bottom: 4px;
-    touch-action: none;
-    cursor: grab;
-  }
-
-  #route-sheet-handle::before {
-    content: '';
+  .sheet-grip {
+    display: block;
     width: 36px;
     height: 4px;
     border-radius: 2px;
     background: #ddd0bc;
+    touch-action: none;
+  }
+
+  /* the collapsed state - a real tappable bar, not just a thin handle someone could miss */
+  #route-peek-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-height: 60px;
+    padding: 6px 2px 4px;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--text);
+    cursor: grab;
+  }
+
+  #route-peek-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  #route-peek-text {
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #route-peek-action {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-text);
+  }
+
+  #route-peek-action svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* half/full - a plain title row instead of the peek bar, w/ a real collapse button */
+  #route-sheet-header {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 6px 2px 4px;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  #route-sheet-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  #route-sheet-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  #route-sheet-collapse-btn {
+    border: none;
+    background: none;
+    color: var(--muted);
+    padding: 4px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -4px;
+    cursor: pointer;
+  }
+
+  #route-sheet-collapse-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  #route-cards-panel[data-sheet="half"] #route-peek-bar,
+  #route-cards-panel[data-sheet="full"] #route-peek-bar {
+    display: none;
+  }
+
+  #route-cards-panel[data-sheet="half"] #route-sheet-header,
+  #route-cards-panel[data-sheet="full"] #route-sheet-header {
+    display: flex;
   }
 
   /* still in the layout (so the panel's own height, and the translateY math, stay correct)
-     just not visible or reachable while only the handle is peeking up */
+     just not visible or reachable while only the peek bar is showing */
   #route-cards-panel[data-sheet="collapsed"] #route-cards,
   #route-cards-panel[data-sheet="collapsed"] #route-color-key,
   #route-cards-panel[data-sheet="collapsed"] #leave-time-label {

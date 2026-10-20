@@ -111,7 +111,7 @@ const ROUTE_LABELS = ['Route A', 'Route B', 'Route C', 'Route D'];
 const MOBILE_SHEET_PX = 700; // keep in sync w/ the media query in style.css
 
 // bottom sheet: 3 stops, transform based so dragging it doesn't thrash layout
-const SHEET_COLLAPSED_PEEK = 34; // just the handle
+const SHEET_COLLAPSED_PEEK = 64; // the peek bar, keep in sync w/ the translateY in style.css
 const SHEET_HALF_PEEK = 360; // about 3 cards
 const SHEET_TAP_MAX_MOVE = 6; // px of movement below which a press counts as a tap, not a drag
 let sheetState = 'collapsed'; // collapsed | half | full
@@ -180,6 +180,7 @@ function setSheetState(s) {
   const panel = document.getElementById('route-cards-panel');
   panel.dataset.sheet = s;
   panel.style.transform = ''; // hand back to the css rule for the stop we just picked
+  document.getElementById('route-peek-bar').setAttribute('aria-expanded', String(s !== 'collapsed'));
   // wait for the sheet's own transition before re-measuring its height
   setTimeout(() => {
     fitSelectedRoute();
@@ -192,30 +193,31 @@ let sheetDragMoved = false;
 let sheetDragStartY = 0;
 let sheetDragStartTranslate = 0;
 let sheetDragTranslate = 0;
+let sheetDragStartEl = null;
 
-function sheetStepUp() {
-  setSheetState(sheetState === 'collapsed' ? 'half' : sheetState === 'half' ? 'full' : 'collapsed');
-}
-
-const sheetHandle = document.getElementById('route-sheet-handle');
+const peekBar = document.getElementById('route-peek-bar');
+const sheetHeader = document.getElementById('route-sheet-header');
 
 let sheetDragHeight = 0;
 let sheetDragRaf = null;
 
-sheetHandle.addEventListener('pointerdown', e => {
+function startSheetDrag(e) {
   if (!isMobileSheet()) return;
+  // pointer capture on the header would steal the click meant for this, let it through instead
+  if (e.target.closest('#route-sheet-collapse-btn')) return;
   sheetDragging = true;
   sheetDragMoved = false;
   sheetDragStartY = e.clientY;
+  sheetDragStartEl = e.currentTarget;
   const panel = document.getElementById('route-cards-panel');
   // read the height once here instead of every pointermove, it doesn't change mid drag anyway
   sheetDragHeight = panel.getBoundingClientRect().height;
   sheetDragStartTranslate = sheetDragHeight - sheetPeekPx();
   panel.style.transition = 'none';
-  sheetHandle.setPointerCapture(e.pointerId);
-});
+  e.currentTarget.setPointerCapture(e.pointerId);
+}
 
-sheetHandle.addEventListener('pointermove', e => {
+function moveSheetDrag(e) {
   if (!sheetDragging) return;
   const deltaY = e.clientY - sheetDragStartY;
   if (Math.abs(deltaY) > SHEET_TAP_MAX_MOVE) sheetDragMoved = true;
@@ -225,7 +227,7 @@ sheetHandle.addEventListener('pointermove', e => {
     document.getElementById('route-cards-panel').style.transform = `translateY(${sheetDragTranslate}px)`;
     sheetDragRaf = null;
   });
-});
+}
 
 function endSheetDrag() {
   if (!sheetDragging) return;
@@ -235,7 +237,8 @@ function endSheetDrag() {
   panel.style.transition = '';
 
   if (!sheetDragMoved) {
-    sheetStepUp();
+    // a plain tap on the peek bar always opens to half, tapping the header does nothing on its own
+    if (sheetDragStartEl === peekBar) setSheetState('half');
     return;
   }
 
@@ -250,13 +253,46 @@ function endSheetDrag() {
   setSheetState(nearest.state);
 }
 
-sheetHandle.addEventListener('pointerup', endSheetDrag);
-sheetHandle.addEventListener('pointercancel', endSheetDrag);
+[peekBar, sheetHeader].forEach(el => {
+  el.addEventListener('pointerdown', startSheetDrag);
+  el.addEventListener('pointermove', moveSheetDrag);
+  el.addEventListener('pointerup', endSheetDrag);
+  el.addEventListener('pointercancel', endSheetDrag);
+});
+
+// keyboard activation (space/enter) fires a click w/ no pointer events behind it at all,
+// the real taps are already handled by the drag listeners above
+peekBar.addEventListener('click', e => {
+  if (e.detail !== 0) return;
+  setSheetState('half');
+});
+
+document.getElementById('route-sheet-collapse-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  setSheetState('collapsed');
+});
+
+// the "3 routes · coolest 24 min" line on the collapsed peek bar
+function routePeekSummaryText() {
+  const n = routes.length;
+  const plural = n === 1 ? 'route' : 'routes';
+  if (scoring) return `${n} ${plural} · checking shade...`;
+  const coolest = routeScores[coolestIndex];
+  if (coolestIndex < 0 || !coolest || coolest.coverage < MIN_COVERAGE) return `${n} ${plural}`;
+  return `${n} ${plural} · coolest ${formatDuration(routes[coolestIndex].durationMillis)}`;
+}
+
+function updateRoutePeekBar() {
+  const n = routes.length;
+  document.getElementById('route-peek-text').textContent = routePeekSummaryText();
+  document.getElementById('route-peek-bar').setAttribute('aria-label', `Show ${n} route${n === 1 ? '' : 's'}`);
+}
 
 function renderRouteCards() {
   const panel = document.getElementById('route-cards-panel');
   panel.hidden = !routes.length;
   positionRouteCardsPanel();
+  updateRoutePeekBar();
   document.getElementById('leave-time-label').textContent = leaveTimeCardsLabel();
   const list = document.getElementById('route-cards');
   list.innerHTML = '';
@@ -400,6 +436,8 @@ function showRouteLoading() {
   const panel = document.getElementById('route-cards-panel');
   panel.hidden = false;
   positionRouteCardsPanel();
+  document.getElementById('route-peek-text').textContent = 'Finding routes...';
+  document.getElementById('route-peek-bar').setAttribute('aria-label', 'Show routes');
   document.getElementById('leave-time-label').textContent = '';
   const list = document.getElementById('route-cards');
   list.innerHTML = '';
