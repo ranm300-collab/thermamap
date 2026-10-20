@@ -490,6 +490,26 @@ body {
   gap: 10px;
 }
 
+.route-card-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* heat level dot, same 5 colors as the legend swatches - not a border, CLAUDE.md bans that look */
+.route-card-swatch {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.route-card-swatch.band-0 { background: #22568f; }
+.route-card-swatch.band-1 { background: #7aa5c4; }
+.route-card-swatch.band-2 { background: #e0d6c4; }
+.route-card-swatch.band-3 { background: #d68644; }
+.route-card-swatch.band-4 { background: #9c2b1f; }
+
 .route-card-label {
   font-size: 0.7rem;
   color: var(--muted);
@@ -585,43 +605,61 @@ body {
     right: 0;
     bottom: 0;
     width: auto;
-    max-height: 170px; /* collapsed, about one card tall */
-    background: var(--bg);
+    max-height: 70vh;
+    /* --bg w/ a little see-through at the half stop so the map still reads underneath */
+    background: rgba(244, 237, 224, 0.95);
     border-radius: 14px 14px 0 0;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
-    padding: 8px 14px calc(env(safe-area-inset-bottom) + 10px);
-    transition: max-height 200ms ease;
+    padding: 6px 14px calc(env(safe-area-inset-bottom) + 10px);
+    /* transform not max-height, so dragging the handle doesn't fight layout every frame */
+    transform: translateY(calc(100% - 34px));
+    transition: transform 280ms ease;
   }
 
-  #route-cards-panel.expanded {
-    max-height: 70vh;
+  #route-cards-panel[data-sheet="half"] {
+    transform: translateY(calc(100% - 360px));
+  }
+
+  #route-cards-panel[data-sheet="full"] {
+    transform: translateY(0);
   }
 
   #route-sheet-handle {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 28px; /* visual bar is thin, but the tap/drag target is a real 44pt-ish strip */
+    margin-bottom: 4px;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  #route-sheet-handle::before {
+    content: '';
     width: 36px;
     height: 4px;
     border-radius: 2px;
     background: #ddd0bc;
-    margin: 2px auto 10px;
   }
 
-  #route-cards-panel:not(.expanded) .route-card:not(.selected) {
-    display: none;
-  }
-
-  #route-cards-panel:not(.expanded) #route-color-key {
-    display: none;
+  /* still in the layout (so the panel's own height, and the translateY math, stay correct)
+     just not visible or reachable while only the handle is peeking up */
+  #route-cards-panel[data-sheet="collapsed"] #route-cards,
+  #route-cards-panel[data-sheet="collapsed"] #route-color-key,
+  #route-cards-panel[data-sheet="collapsed"] #leave-time-label {
+    visibility: hidden;
   }
 
   /* real tap targets on a phone, even for the small icon-only ones */
   #heat-toggle, .mode-btn, #leave-label-btn, #leave-reset-btn, #current-location-row,
   #swap-btn, .route-card-start-btn, #nav-end-btn, #nav-voice-toggle, #nav-recenter-btn,
-  #nav-location-exit-btn, #alert-banner {
+  #nav-location-exit-btn, #alert-banner, #search-pill {
     min-height: 44px;
   }
 
-  #tap-popup-close, #nav-steps-list-close {
+  #tap-popup-close, #nav-steps-list-close, #search-card-close,
+  #fieldtest-form-close, #fieldtest-panel-close {
     min-width: 44px;
     min-height: 44px;
     display: flex;

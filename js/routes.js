@@ -109,7 +109,12 @@ function routeArriveText(route) {
 
 const ROUTE_LABELS = ['Route A', 'Route B', 'Route C', 'Route D'];
 const MOBILE_SHEET_PX = 700; // keep in sync w/ the media query in style.css
-let sheetExpanded = false;
+
+// bottom sheet: 3 stops, transform based so dragging it doesn't thrash layout
+const SHEET_COLLAPSED_PEEK = 34; // just the handle
+const SHEET_HALF_PEEK = 360; // about 3 cards
+const SHEET_TAP_MAX_MOVE = 6; // px of movement below which a press counts as a tap, not a drag
+let sheetState = 'collapsed'; // collapsed | half | full
 
 const LONG_WALK_MIN = 45;
 const LONG_WALK_HOT_F = 90;
@@ -144,8 +149,17 @@ function positionRouteCardsPanel() {
   panel.style.width = rect.width + 'px';
 }
 
+// how much of the sheet is actually peeking above the bottom edge right now
+function sheetPeekPx() {
+  const panel = document.getElementById('route-cards-panel');
+  const h = panel.getBoundingClientRect().height;
+  if (sheetState === 'collapsed') return SHEET_COLLAPSED_PEEK;
+  if (sheetState === 'half') return Math.min(SHEET_HALF_PEEK, h);
+  return h;
+}
+
 // heat-legend is a map control anchored near the bottom too, so on the phone-width bottom
-// sheet it needs to get pushed up above the sheet instead of sitting underneath it
+// sheet it needs to get pushed up above whatever's currently peeking instead of sitting under it
 function positionHeatLegendAboveSheet() {
   const legend = document.getElementById('heat-legend');
   const panel = document.getElementById('route-cards-panel');
@@ -153,7 +167,7 @@ function positionHeatLegendAboveSheet() {
     legend.style.marginBottom = '';
     return;
   }
-  legend.style.marginBottom = (panel.getBoundingClientRect().height + 8) + 'px';
+  legend.style.marginBottom = (sheetPeekPx() + 8) + 'px';
 }
 
 window.addEventListener('resize', () => {
@@ -161,15 +175,76 @@ window.addEventListener('resize', () => {
   positionHeatLegendAboveSheet();
 });
 
-function setSheetExpanded(expanded) {
-  sheetExpanded = expanded;
-  document.getElementById('route-cards-panel').classList.toggle('expanded', expanded);
+function setSheetState(s) {
+  sheetState = s;
+  const panel = document.getElementById('route-cards-panel');
+  panel.dataset.sheet = s;
+  panel.style.transform = ''; // hand back to the css rule for the stop we just picked
   // wait for the sheet's own transition before re-measuring its height
   setTimeout(() => {
     fitSelectedRoute();
     positionHeatLegendAboveSheet();
-  }, 220);
+  }, 300);
 }
+
+let sheetDragging = false;
+let sheetDragMoved = false;
+let sheetDragStartY = 0;
+let sheetDragStartTranslate = 0;
+let sheetDragTranslate = 0;
+
+function sheetStepUp() {
+  setSheetState(sheetState === 'collapsed' ? 'half' : sheetState === 'half' ? 'full' : 'collapsed');
+}
+
+const sheetHandle = document.getElementById('route-sheet-handle');
+
+sheetHandle.addEventListener('pointerdown', e => {
+  if (!isMobileSheet()) return;
+  sheetDragging = true;
+  sheetDragMoved = false;
+  sheetDragStartY = e.clientY;
+  const panel = document.getElementById('route-cards-panel');
+  sheetDragStartTranslate = panel.getBoundingClientRect().height - sheetPeekPx();
+  panel.style.transition = 'none';
+  sheetHandle.setPointerCapture(e.pointerId);
+});
+
+sheetHandle.addEventListener('pointermove', e => {
+  if (!sheetDragging) return;
+  const deltaY = e.clientY - sheetDragStartY;
+  if (Math.abs(deltaY) > SHEET_TAP_MAX_MOVE) sheetDragMoved = true;
+  const panel = document.getElementById('route-cards-panel');
+  const h = panel.getBoundingClientRect().height;
+  sheetDragTranslate = Math.max(0, Math.min(sheetDragStartTranslate + deltaY, h - SHEET_COLLAPSED_PEEK));
+  panel.style.transform = `translateY(${sheetDragTranslate}px)`;
+});
+
+function endSheetDrag() {
+  if (!sheetDragging) return;
+  sheetDragging = false;
+  const panel = document.getElementById('route-cards-panel');
+  panel.style.transition = '';
+
+  if (!sheetDragMoved) {
+    sheetStepUp();
+    return;
+  }
+
+  const h = panel.getBoundingClientRect().height;
+  const peek = h - sheetDragTranslate;
+  const stops = [
+    { state: 'collapsed', peek: SHEET_COLLAPSED_PEEK },
+    { state: 'half', peek: Math.min(SHEET_HALF_PEEK, h) },
+    { state: 'full', peek: h }
+  ];
+  let nearest = stops[0];
+  stops.forEach(s => { if (Math.abs(s.peek - peek) < Math.abs(nearest.peek - peek)) nearest = s; });
+  setSheetState(nearest.state);
+}
+
+sheetHandle.addEventListener('pointerup', endSheetDrag);
+sheetHandle.addEventListener('pointercancel', endSheetDrag);
 
 function renderRouteCards() {
   const panel = document.getElementById('route-cards-panel');
@@ -188,10 +263,21 @@ function renderRouteCards() {
     const top = document.createElement('div');
     top.className = 'route-card-top';
 
+    const labelRow = document.createElement('div');
+    labelRow.className = 'route-card-label-row';
+
+    const score = routeScores[i];
+    if (score && score.coverage >= MIN_COVERAGE) {
+      const swatch = document.createElement('span');
+      swatch.className = `route-card-swatch band-${bandIndexFor(score.groundAnom)}`;
+      labelRow.appendChild(swatch);
+    }
+
     const label = document.createElement('div');
     label.className = 'route-card-label';
     label.textContent = route.isDetour ? 'Shady detour' : (ROUTE_LABELS[i] || `Route ${i + 1}`);
-    top.appendChild(label);
+    labelRow.appendChild(label);
+    top.appendChild(labelRow);
 
     if (i === selectedRouteIndex) {
       const startBtn = document.createElement('button');
@@ -258,7 +344,7 @@ function renderRouteCards() {
 
     const pickThisCard = () => {
       selectRouteByUser(i);
-      if (!sheetExpanded) setSheetExpanded(true);
+      setSheetState('collapsed');
     };
     card.addEventListener('click', pickThisCard);
     card.addEventListener('keydown', e => {
@@ -273,14 +359,12 @@ function renderRouteCards() {
   positionHeatLegendAboveSheet();
 }
 
-document.getElementById('route-sheet-handle').addEventListener('click', () => setSheetExpanded(!sheetExpanded));
-
 function fitSelectedRoute() {
   const route = routes[selectedRouteIndex];
   if (!route) return;
   const panel = document.getElementById('route-cards-panel');
-  // phone = bottom sheet over the map, pad around however tall it actually is
-  const bottomPad = isMobileSheet() && !panel.hidden ? panel.getBoundingClientRect().height + 20 : 40;
+  // phone = bottom sheet over the map, pad around however much of it is actually peeking up
+  const bottomPad = isMobileSheet() && !panel.hidden ? sheetPeekPx() + 20 : 40;
   // extra top/left padding, card sits over teh corner of the map
   map.fitBounds(route.viewport, { top: 40, left: 280, right: 40, bottom: bottomPad });
 }
@@ -326,8 +410,7 @@ async function loadRoutes() {
   routeScores = [];
   coolestIndex = -1;
   userPickedRoute = false;
-  sheetExpanded = false;
-  document.getElementById('route-cards-panel').classList.remove('expanded');
+  setSheetState('collapsed');
   showRouteLoading();
 
   try {
@@ -355,6 +438,7 @@ async function loadRoutes() {
     selectedRouteIndex = 0;
     drawRoutes();
     renderRouteCards();
+    setSheetState('half'); // open enough to actually see the picks, per the redesign
     fitSelectedRoute();
     scoreAllRoutes();
     showLeaveHintIfNew();
