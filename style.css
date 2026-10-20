@@ -61,7 +61,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  gap: 12px;
+  /* max() so there's still real breathing room under the status bar even if a device
+     reports a smaller inset than expected, found this overlapping on a real phone */
+  padding-top: max(calc(env(safe-area-inset-top) + 10px), 54px);
+  padding-bottom: 10px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   border-bottom: 1px solid #ddd0bc;
 }
 
@@ -97,7 +103,8 @@ body {
 
 /* during nav the instruction card needs the room, drop down to just the temp */
 #top-bar.nav-compact {
-  padding: calc(env(safe-area-inset-top) + 6px) 16px 6px;
+  padding-top: max(calc(env(safe-area-inset-top) + 6px), 50px);
+  padding-bottom: 6px;
 }
 
 #top-bar.nav-compact #temp-detail,
