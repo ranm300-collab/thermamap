@@ -47,6 +47,8 @@ let navAccuracyCircle = null;
 let navWalkedLine = null;
 let navLastFix = null;
 let navLastHeading = 0;
+let navLastRedrawMs = 0;
+const NAV_REDRAW_MIN_MS = 1500; // heat segments dont need repainting on literally every gps fix
 
 let navSteps = [];
 let navStepBoundaryDists = [];
@@ -279,6 +281,7 @@ function setupNavSteps() {
   navLastHeatKind = null;
   navOffRouteStreak = 0;
   navSimDist = 0; // reroutes call this too, progress-along-route restarts on the new route
+  navLastRedrawMs = 0; // redraw right away on the next fix instead of waiting out the throttle
   const leg = routes[selectedRouteIndex].legs && routes[selectedRouteIndex].legs[0];
   navSteps = (leg && leg.steps) || [];
 
@@ -538,16 +541,19 @@ function toggleStepsList() {
 
 // walked part fades out, the rest keeps the normal heat colors like a selected route does
 function redrawNavRoute(samples, idx) {
-  if (navWalkedLine) navWalkedLine.setMap(null);
   const walkedPath = samples.slice(0, idx + 1).map(s => ({ lat: s.lat, lng: s.lng }));
-  navWalkedLine = new google.maps.Polyline({
-    path: walkedPath,
-    map: map,
-    strokeColor: NAV_WALKED_COLOR,
-    strokeOpacity: 0.9,
-    strokeWeight: 6,
-    zIndex: 4
-  });
+  if (navWalkedLine) {
+    navWalkedLine.setPath(walkedPath); // reuse it, no reason to tear down and rebuild every fix
+  } else {
+    navWalkedLine = new google.maps.Polyline({
+      path: walkedPath,
+      map: map,
+      strokeColor: NAV_WALKED_COLOR,
+      strokeOpacity: 0.9,
+      strokeWeight: 6,
+      zIndex: 4
+    });
+  }
   drawRouteSegments(selectedRouteIndex, buildRuns(samples.slice(idx)));
 }
 
@@ -560,6 +566,11 @@ function updateNavProgress(route, samples, idx) {
   document.getElementById('nav-progress').textContent =
     `${formatDuration(timeRemainingMs)} · ${formatDistance(distRemaining)} · arrive ${formatClockTime(arrival)}`;
 
+  // the heat segments were getting rebuilt from scratch on literally every gps fix, way more
+  // often than the colors actually change - throttling this is what fixed the lag on my phone
+  const now = Date.now();
+  if (now - navLastRedrawMs < NAV_REDRAW_MIN_MS) return;
+  navLastRedrawMs = now;
   redrawNavRoute(samples, idx);
 }
 

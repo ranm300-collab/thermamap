@@ -199,13 +199,18 @@ function sheetStepUp() {
 
 const sheetHandle = document.getElementById('route-sheet-handle');
 
+let sheetDragHeight = 0;
+let sheetDragRaf = null;
+
 sheetHandle.addEventListener('pointerdown', e => {
   if (!isMobileSheet()) return;
   sheetDragging = true;
   sheetDragMoved = false;
   sheetDragStartY = e.clientY;
   const panel = document.getElementById('route-cards-panel');
-  sheetDragStartTranslate = panel.getBoundingClientRect().height - sheetPeekPx();
+  // read the height once here instead of every pointermove, it doesn't change mid drag anyway
+  sheetDragHeight = panel.getBoundingClientRect().height;
+  sheetDragStartTranslate = sheetDragHeight - sheetPeekPx();
   panel.style.transition = 'none';
   sheetHandle.setPointerCapture(e.pointerId);
 });
@@ -214,15 +219,18 @@ sheetHandle.addEventListener('pointermove', e => {
   if (!sheetDragging) return;
   const deltaY = e.clientY - sheetDragStartY;
   if (Math.abs(deltaY) > SHEET_TAP_MAX_MOVE) sheetDragMoved = true;
-  const panel = document.getElementById('route-cards-panel');
-  const h = panel.getBoundingClientRect().height;
-  sheetDragTranslate = Math.max(0, Math.min(sheetDragStartTranslate + deltaY, h - SHEET_COLLAPSED_PEEK));
-  panel.style.transform = `translateY(${sheetDragTranslate}px)`;
+  sheetDragTranslate = Math.max(0, Math.min(sheetDragStartTranslate + deltaY, sheetDragHeight - SHEET_COLLAPSED_PEEK));
+  if (sheetDragRaf) return; // a paint's already queued for this frame, no need to stack more
+  sheetDragRaf = requestAnimationFrame(() => {
+    document.getElementById('route-cards-panel').style.transform = `translateY(${sheetDragTranslate}px)`;
+    sheetDragRaf = null;
+  });
 });
 
 function endSheetDrag() {
   if (!sheetDragging) return;
   sheetDragging = false;
+  if (sheetDragRaf) { cancelAnimationFrame(sheetDragRaf); sheetDragRaf = null; }
   const panel = document.getElementById('route-cards-panel');
   panel.style.transition = '';
 
@@ -231,12 +239,11 @@ function endSheetDrag() {
     return;
   }
 
-  const h = panel.getBoundingClientRect().height;
-  const peek = h - sheetDragTranslate;
+  const peek = sheetDragHeight - sheetDragTranslate;
   const stops = [
     { state: 'collapsed', peek: SHEET_COLLAPSED_PEEK },
-    { state: 'half', peek: Math.min(SHEET_HALF_PEEK, h) },
-    { state: 'full', peek: h }
+    { state: 'half', peek: Math.min(SHEET_HALF_PEEK, sheetDragHeight) },
+    { state: 'full', peek: sheetDragHeight }
   ];
   let nearest = stops[0];
   stops.forEach(s => { if (Math.abs(s.peek - peek) < Math.abs(nearest.peek - peek)) nearest = s; });
@@ -462,10 +469,15 @@ function setMode(mode) {
 document.getElementById('mode-walk').addEventListener('click', () => setMode('WALKING'));
 document.getElementById('mode-bike').addEventListener('click', () => setMode('BICYCLING'));
 
-// keeps "arrive 4:37 pm" honest as the clock moves, only matters when following "now"
+// keeps "arrive 4:37 pm" honest as the clock moves, only matters when following "now".
+// just the time text, not a full renderRouteCards() - no reason to rebuild every card's dom for this
 function refreshArrivalTimesIfNow() {
   if (state.leaveTimeMs !== null || !routes.length) return;
-  renderRouteCards();
+  const mains = document.querySelectorAll('.route-card-main');
+  routes.forEach((route, i) => {
+    if (!mains[i]) return;
+    mains[i].textContent = `${formatDuration(route.durationMillis)} · ${routeArriveText(route)} · ${formatDistance(route.distanceMeters)}`;
+  });
 }
 
 registerJob('arrival-times', 30 * 1000, refreshArrivalTimesIfNow);
