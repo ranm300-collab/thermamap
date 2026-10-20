@@ -390,6 +390,13 @@ async function initSearch() {
     destEl.addEventListener('input', clearDestIfEmpty);
     destEl.addEventListener('focusout', clearDestIfEmpty);
 
+    // focusout catches it once you leave the field, but the clear x doesn't make you leave -
+    // you can tap it and just sit there, so this is the real backstop for that
+    setInterval(() => {
+      clearStartIfEmpty();
+      clearDestIfEmpty();
+    }, 400);
+
     // top left so it stays clear of the zoom buttons. one container pushed in, not two -
     // maps lays out multiple pushed elements side by side instead of letting them overlap
     const container = document.getElementById('search-container');
