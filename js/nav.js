@@ -779,9 +779,8 @@ function endNav() {
   if (navStepsListOpen) toggleStepsList();
   document.getElementById('search-container').hidden = false;
 
-  // navActive is already false above, so this rescore redraws the normal full-route
-  // coloring and refreshes the cards/panel itself, no need to touch them separately here
-  rescoreAllFromCache();
+  // trip's over, back to a blank map instead of showing the route they just walked
+  clearRoute();
 }
 
 document.getElementById('nav-end-btn').addEventListener('click', endNav);

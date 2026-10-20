@@ -350,20 +350,26 @@ async function initSearch() {
 
     // focusin/focusout cross the shadow boundry, plain focus/blur dont
     const locationRow = document.getElementById('current-location-row');
+    // widget's own clear x doesn't fire input/change at all, only value changes.
+    // focusout is the one event that reliably fires once they leave the field either way
+    function clearStartIfEmpty() {
+      if (startEl.value !== '' || !state.start) return;
+      state.start = null;
+      if (startMarker) { startMarker.setMap(null); startMarker = null; }
+      clearHereMarker();
+      clearRouteDisplay();
+    }
+
     startEl.addEventListener('focusin', () => { locationRow.hidden = false; });
     startEl.addEventListener('focusout', e => {
       if (e.relatedTarget === locationRow) return; // tabbing into the button, dont yank it away
       locationRow.hidden = true;
+      clearStartIfEmpty();
     });
     startEl.addEventListener('input', () => {
       locationRow.hidden = true;
       clearHereMarker();
-      // field went empty - stale pin/route for the old start shouldn't stick around
-      if (startEl.value === '' && state.start) {
-        state.start = null;
-        if (startMarker) { startMarker.setMap(null); startMarker = null; }
-        clearRouteDisplay();
-      }
+      clearStartIfEmpty();
     });
     // without this the row blurs before the click lands, mousedown fires first
     locationRow.addEventListener('mousedown', e => e.preventDefault());
@@ -375,13 +381,14 @@ async function initSearch() {
     destEl.includedRegionCodes = ['us'];
     document.getElementById('dest-slot').appendChild(destEl);
     wireAutocomplete(destEl, setDestPlace);
-    destEl.addEventListener('input', () => {
-      if (destEl.value === '' && state.dest) {
-        state.dest = null;
-        if (destMarker) { destMarker.setMap(null); destMarker = null; }
-        clearRouteDisplay();
-      }
-    });
+    function clearDestIfEmpty() {
+      if (destEl.value !== '' || !state.dest) return;
+      state.dest = null;
+      if (destMarker) { destMarker.setMap(null); destMarker = null; }
+      clearRouteDisplay();
+    }
+    destEl.addEventListener('input', clearDestIfEmpty);
+    destEl.addEventListener('focusout', clearDestIfEmpty);
 
     // top left so it stays clear of the zoom buttons. one container pushed in, not two -
     // maps lays out multiple pushed elements side by side instead of letting them overlap
