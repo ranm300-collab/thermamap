@@ -722,7 +722,7 @@ async function startNav() {
   setLeaveTime(null); // leaving now, so the route scoring and arrival math line up w/ reality
   setupNavSteps();
 
-  document.getElementById('search-card').hidden = true;
+  document.getElementById('search-container').hidden = true;
   document.getElementById('route-cards-panel').hidden = true;
   document.getElementById('nav-bar').hidden = false;
   document.getElementById('top-bar').classList.add('nav-compact'); // frees up room for the instruction card
@@ -777,7 +777,7 @@ function endNav() {
   document.getElementById('nav-instruction').hidden = true;
   document.getElementById('top-bar').classList.remove('nav-compact');
   if (navStepsListOpen) toggleStepsList();
-  document.getElementById('search-card').hidden = false;
+  document.getElementById('search-container').hidden = false;
 
   // navActive is already false above, so this rescore redraws the normal full-route
   // coloring and refreshes the cards/panel itself, no need to touch them separately here

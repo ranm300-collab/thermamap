@@ -259,12 +259,81 @@ body {
   text-align: center;
 }
 
-#search-card {
-  width: min(92vw, 340px);
+/* one container pushed into map.controls - maps lays out multiple pushed elements in a
+   row, so the pill and the expanded card both live in here and overlap via position instead */
+#search-container {
+  position: relative;
+}
+
+#search-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(92vw, 280px);
+  padding: 12px 16px;
+  border: none;
+  border-radius: 999px;
   background: var(--bg);
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  text-align: left;
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+#search-pill.search-pill-hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+#search-pill-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+#search-pill-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+#search-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: min(92vw, 340px);
+  /* --bg w/ a bit of see-through so the map still shows underneath while it's open */
+  background: rgba(244, 237, 224, 0.96);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+
+#search-card.expanded {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+#search-card-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 6px;
 }
 
 #search-card gmp-place-autocomplete {

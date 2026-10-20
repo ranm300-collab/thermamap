@@ -76,24 +76,31 @@
   <div id="tap-popup-content"></div>
 </div>
 
-<div id="search-card" hidden>
-  <div id="start-slot"></div>
-  <button type="button" id="current-location-row" hidden>Current location</button>
-  <button id="swap-btn" type="button">⇅ Swap</button>
-  <div id="dest-slot"></div>
-  <div id="search-error" hidden>Search isn't loading right now</div>
-  <div id="location-notice" hidden></div>
-  <div id="mode-toggle">
-    <button type="button" id="mode-walk" class="mode-btn active">Walk</button>
-    <button type="button" id="mode-bike" class="mode-btn">Bike</button>
+<div id="search-container" hidden>
+  <button type="button" id="search-pill">
+    <svg id="search-pill-icon" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" fill="currentColor"/></svg>
+    <span id="search-pill-text">Where to?</span>
+  </button>
+  <div id="search-card">
+    <button type="button" id="search-card-close" aria-label="Clear route">×</button>
+    <div id="start-slot"></div>
+    <button type="button" id="current-location-row" hidden>Current location</button>
+    <button id="swap-btn" type="button">⇅ Swap</button>
+    <div id="dest-slot"></div>
+    <div id="search-error" hidden>Search isn't loading right now</div>
+    <div id="location-notice" hidden></div>
+    <div id="mode-toggle">
+      <button type="button" id="mode-walk" class="mode-btn active">Walk</button>
+      <button type="button" id="mode-bike" class="mode-btn">Bike</button>
+    </div>
+    <div id="leave-row">
+      <button type="button" id="leave-label-btn">Leaving now ▾</button>
+      <input type="time" id="leave-time-input" hidden>
+      <button type="button" id="leave-reset-btn" hidden>Now</button>
+    </div>
+    <div id="leave-hint" hidden>shade changes through the day, pick when you're heading out</div>
+    <div id="route-error" hidden></div>
   </div>
-  <div id="leave-row">
-    <button type="button" id="leave-label-btn">Leaving now ▾</button>
-    <input type="time" id="leave-time-input" hidden>
-    <button type="button" id="leave-reset-btn" hidden>Now</button>
-  </div>
-  <div id="leave-hint" hidden>shade changes through the day, pick when you're heading out</div>
-  <div id="route-error" hidden></div>
 </div>
 
 <div id="route-cards-panel" hidden>

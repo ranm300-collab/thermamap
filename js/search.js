@@ -7,6 +7,7 @@ let startMarker = null;
 let destMarker = null;
 let hereMarker = null;
 let accuracyCircle = null;
+let searchExpanded = false;
 
 function pinIcon(color) {
   return {
@@ -108,6 +109,31 @@ function fitBothPins() {
   bounds.extend(destMarker.getPosition());
   map.fitBounds(bounds, 60);
 }
+
+// pill shows a short "X to Y" once both ends are picked, otherwise just the placeholder
+function updateSearchPillText() {
+  document.getElementById('search-pill-text').textContent =
+    (state.start && state.dest) ? `${state.start.name} to ${state.dest.name}` : 'Where to?';
+}
+
+function setSearchExpanded(expanded) {
+  searchExpanded = expanded;
+  document.getElementById('search-card').classList.toggle('expanded', expanded);
+  document.getElementById('search-pill').classList.toggle('search-pill-hidden', expanded);
+  if (!expanded) updateSearchPillText();
+}
+
+document.getElementById('search-pill').addEventListener('click', () => setSearchExpanded(true));
+
+// tap anywhere outside the open panel to collapse it back to the pill (doesn't clear anything,
+// setStartPlace/setDestPlace already updated state.start/dest if a real pick happened)
+document.addEventListener('click', e => {
+  if (!searchExpanded) return;
+  const card = document.getElementById('search-card');
+  const pill = document.getElementById('search-pill');
+  if (card.contains(e.target) || pill.contains(e.target)) return;
+  setSearchExpanded(false);
+});
 
 function setStartPlace(place) {
   state.start = { lat: place.location.lat(), lng: place.location.lng(), name: place.displayName };
@@ -308,19 +334,22 @@ async function initSearch() {
     document.getElementById('dest-slot').appendChild(destEl);
     wireAutocomplete(destEl, setDestPlace);
 
-    // top left so it stays clear of the zoom buttons
-    const card = document.getElementById('search-card');
-    card.hidden = false;
-    map.controls[google.maps.ControlPosition.TOP_LEFT].push(card);
+    // top left so it stays clear of the zoom buttons. one container pushed in, not two -
+    // maps lays out multiple pushed elements side by side instead of letting them overlap
+    const container = document.getElementById('search-container');
+    container.hidden = false;
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(container);
   } catch (err) {
     console.error('places library failed to load', err);
     document.getElementById('search-error').hidden = false;
     document.getElementById('start-slot').hidden = true;
     document.getElementById('dest-slot').hidden = true;
     document.getElementById('swap-btn').hidden = true;
-    // top left so it stays clear of the zoom buttons
-    const card = document.getElementById('search-card');
-    card.hidden = false;
-    map.controls[google.maps.ControlPosition.TOP_LEFT].push(card);
+    // no autocomplete to collapse away from, just show the card open and skip the pill
+    const container = document.getElementById('search-container');
+    container.hidden = false;
+    document.getElementById('search-pill').hidden = true;
+    document.getElementById('search-card').classList.add('expanded');
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(container);
   }
 }

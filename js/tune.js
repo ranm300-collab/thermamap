@@ -163,7 +163,7 @@ async function runTuneHarness() {
 
 function initTuneMode() {
   if (!tuneOn()) return;
-  document.getElementById('search-card').hidden = true;
+  document.getElementById('search-container').hidden = true;
   // give maps/grid data a sec to finish loading before hammering it with requests
   setTimeout(runTuneHarness, 1500);
 }
