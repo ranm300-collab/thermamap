@@ -1,4 +1,4 @@
-# sharpens landsat thermal (really ~100m even though the file is 30m) using the true
+# Sharpens landsat thermal (really ~100m even though the file is 30m) using the true
 # 30m optical bands, tsharp style (kustas 2003) but w/ albedo added in since abq has so
 # much bare ground and pavement that greenness alone doesn't explain the heat pattern
 

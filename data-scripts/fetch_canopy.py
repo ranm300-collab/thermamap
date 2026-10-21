@@ -1,4 +1,4 @@
-# grabs the meta/wri 1m global canopy height tiles that cover the abq bbox
+# Grabs the meta/wri 1m global canopy height tiles that cover the abq bbox
 
 import os
 import json
