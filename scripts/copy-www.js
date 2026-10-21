@@ -1,5 +1,5 @@
 // copies just what the capacitor app needs into a fresh www/, wiping whatever was there before.
-// data/, data-scripts/, .venv/, node_modules/, README, CLAUDE.md etc never go in here
+// data/, data-scripts/, .venv/, node_modules/, README etc never go in here
 
 const fs = require('fs');
 const path = require('path');

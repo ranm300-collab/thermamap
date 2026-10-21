@@ -504,7 +504,7 @@ body {
   gap: 6px;
 }
 
-/* heat level dot, same 5 colors as the legend swatches - not a border, CLAUDE.md bans that look */
+/* heat level dot, same 5 colors as the legend swatches - dot not a border, reads cleaner */
 .route-card-swatch {
   flex: 0 0 auto;
   width: 10px;
