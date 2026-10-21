@@ -177,7 +177,7 @@ function maneuverArrow(maneuver) {
   </svg>`;
 }
 
-// used when the real instructions text is missing, which happens now and then
+// used when the real instructions text is missing, happens now and then, idk why
 function maneuverFallbackText(maneuver) {
   const names = {
     TURN_LEFT: 'Turn left', TURN_RIGHT: 'Turn right',
@@ -808,10 +808,9 @@ document.getElementById('nav-steps-list-close').addEventListener('click', e => {
   toggleStepsList();
 });
 
-// document.visibilitychange isn't reliable once ios actually suspends the app in the
-// background, @capacitor/app's resume event is the real signal for that. true background
-// navigation (tracking while backgrounded) would need background location permission,
-// skipping that on purpose - this just catches up once the app is back in front
+// visibilitychange isn't reliable once ios actually suspends the app - @capacitor/app's
+// resume event is the real signal instead. true background tracking would need the
+// background location permission, skipping that on purpose, this just catches up once it's back up front
 function initAppResume() {
   if (!isNativeApp()) return;
   Capacitor.Plugins.App.addListener('resume', async () => {

@@ -1,7 +1,7 @@
 // looks for a shadier street near the fastest route that google's own alternatives missed.
 // only runs on a new search, leave time changes just rescore whatever detour we already found
 
-// first pass, all of these are guesses til we've actually walked a few
+// First pass - all guesses til i've actually walked a few
 const DETOUR_FRACTIONS = [1 / 3, 1 / 2, 2 / 3]; // where along the fastest route to look
 const DETOUR_OFFSETS_M = [150, 300, 500]; // how far off to the side to check
 const DETOUR_SAMPLE_RADIUS_M = 50; // average shade/canopy over roughly this big a patch

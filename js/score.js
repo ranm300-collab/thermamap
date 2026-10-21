@@ -6,10 +6,10 @@ const SUN_DOWN_HOUR = 19; // our hourly shade data stops at 19:00
 const MAX_DETOUR_RATIO = 1.5; // won't win coolest if its way slower than the fastest route
 const MAX_DETOUR_EXTRA_MS = 20 * 60000; // ...or if its just flat out more than 20 min extra, whichever is smaller
 const MIN_COVERAGE = 0.5; // need data for at least half the route to trust the score
-const HEAT_FACTOR_DIVISOR = 30; // hotter than avg ground counts extra, tune later once we've walked some routes
+const HEAT_FACTOR_DIVISOR = 30; // hotter than avg ground counts extra, tune later once i've walked some routes
 // TODO: shade data is baked for a july 15 sun angle, prob off by winter
 
-// first pass, these are guesses til we've actually walked some hot days
+// first pass, these are guesses til i've actually walked some hot days
 const IN_SHADE_FRAC = 0.5 // over half shaded at a sample counts as "in shade"
 const HOT_ANOM_F = 0 // any sunny sample on hotter than avg ground bumps up from warm
 const VERY_HOT_ANOM_F = 8
