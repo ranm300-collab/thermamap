@@ -1,44 +1,40 @@
-// follow-mode navigation after tapping Start on a route card, plus turn by turn
-// instructions along the way
+// follow-mode navigation after tapping Start on a route card, plus turn-by-turn instructions
 
 const NAV_ZOOM = {WALKING: 18, BICYCLING: 17};
 const NAV_MIN_MOVING_MPS = 0.3; // gps reports tiny nonzero speeds sometimes even standing still
-const NAV_WALKED_COLOR = '#c9bfa8'; // close to the road color, reads as "already done"
+const NAV_WALKED_COLOR = '#c9bfa8';
 
-const NAV_STEP_ADVANCE_M = 15; // this close to the maneuver point (or already past it) = move on
-const NAV_THEN_LOOKAHEAD_M = 90; // about 300 ft, shows the "then" preview once the next step is this short
-const NAV_ARRIVE_M = 20; // this close to the destination counts as arrived
+const NAV_STEP_ADVANCE_M = 15;
+const NAV_THEN_LOOKAHEAD_M = 90;
+const NAV_ARRIVE_M = 20;
 
-const NAV_DIST_MILE_CUTOFF_M = 160; // about 0.1 mi, switch from feet to miles past this
-const NAV_DIST_FINE_FT_M = 30; // about 100 ft, round to the nearest 10ft instead of 50 once this close
+const NAV_DIST_MILE_CUTOFF_M = 160;
+const NAV_DIST_FINE_FT_M = 30;
 
-// how far ahead (in time) to judge the next stretch, and how shaded/sunny it has to be to say so
 const NAV_HEAT_WINDOW_MS = 2.5 * 60000;
 const NAV_HEAT_SHADY_FRAC = 0.7;
 const NAV_HEAT_SUNNY_FRAC = 0.3;
 
-// gps jitters a lot near buildings, so one bad fix should never be enough to trigger a reroute
 const NAV_OFF_ROUTE_M = { WALKING: 40, BICYCLING: 50 };
 const NAV_OFF_ROUTE_STREAK = 3;
 const NAV_OFF_ROUTE_MAX_ACCURACY_M = 50;
 
-const NAV_REROUTE_COOLDOWN_MS = 30000; // at most one reroute this often
+const NAV_REROUTE_COOLDOWN_MS = 30000;
 const NAV_REROUTE_MAX_PER_TRIP = 10; // the routes api has a daily quota, dont burn it chasing gps noise
 
-// ~300ft/~600ft and ~50ft/~100ft, when to announce an upcoming turn
 const NAV_SPEECH_FAR_M = { WALKING: 91, BICYCLING: 183 };
 const NAV_SPEECH_NEAR_M = { WALKING: 15, BICYCLING: 30 };
 
-// dev only, lets me test the whole flow from a laptop w/o real gps. ~5x real speed
+// dev only, tests the whole flow from a laptop w/o real gps
 const SIM_SPEEDS_MPS = {WALKING: 7, BICYCLING: 22.5};
 const SIM_STEP_MS = 500;
-const NAV_SIM_DRIFT_AT_FRAC = 0.3; // drift off route around here so rerouting is easy to watch
+const NAV_SIM_DRIFT_AT_FRAC = 0.3;
 const NAV_SIM_DRIFT_MS = 15000;
-const NAV_SIM_DRIFT_OFFSET_M = 70; // past both off route thresholds
+const NAV_SIM_DRIFT_OFFSET_M = 70;
 
 let navActive = false;
 let navFollowing = true;
-let navWatch = null; // {clear()} from js/geo.js, hides whether the id behind it is native or browser-shaped
+let navWatch = null; // {clear()} from js/geo.js, hides native vs browser id shape
 let navSimTimer = null;
 let navWakeLock = null;
 let navDragListener = null;
@@ -48,7 +44,7 @@ let navWalkedLine = null;
 let navLastFix = null;
 let navLastHeading = 0;
 let navLastRedrawMs = 0;
-const NAV_REDRAW_MIN_MS = 1500; // heat segments dont need repainting on literally every gps fix
+const NAV_REDRAW_MIN_MS = 1500;
 
 let navSteps = [];
 let navStepBoundaryDists = [];
@@ -100,8 +96,7 @@ function bearingBetween(lat1, lng1, lat2, lng2) {
   return (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
 }
 
-// browser heading when it's actually trustworthy, otherwise derive it from movement,
-// and just keep whatever we had last if standing still
+// browser heading when trustworthy, otherwise derive from movement, keep last if standing still
 function headingFor(lat, lng, heading, speed) {
   const isMoving = speed !== null && speed > NAV_MIN_MOVING_MPS;
   if (heading !== null && isMoving) {
@@ -190,8 +185,7 @@ function maneuverFallbackText(maneuver) {
   return names[maneuver] || 'Continue';
 }
 
-// real instructions sometimes come with extra lines tacked on, like "pass by starbucks" or
-// "destination will be on the left" - just the first line reads cleanly on the card
+// real instructions sometimes carry extra lines tacked on, first line reads cleanest alone
 function cleanInstruction(step) {
   const firstLine = step.instructions && step.instructions.split('\n')[0].trim();
   return firstLine || maneuverFallbackText(step.maneuver);
@@ -216,7 +210,6 @@ function speechDistance(meters) {
   return Math.max(rounded, 0) + ' feet';
 }
 
-// abbreviations read fine on the card but sound off said out loud
 const SPEECH_SUFFIXES = [
   [/\bNE\b/g, 'Northeast'], [/\bNW\b/g, 'Northwest'], [/\bSE\b/g, 'Southeast'], [/\bSW\b/g, 'Southwest'],
   [/\bAve\b/g, 'Avenue'], [/\bBlvd\b/g, 'Boulevard'], [/\bRd\b/g, 'Road'], [/\bDr\b/g, 'Drive'],
@@ -227,8 +220,7 @@ function speechify(text) {
   return SPEECH_SUFFIXES.reduce((out, [pattern, word]) => out.replace(pattern, word), text);
 }
 
-// the web speech api is safari-only - wkwebview (what capacitor uses) doesn't get it, so
-// the app uses @capacitor-community/text-to-speech there instead. browser keeps speechSynthesis
+// web speechSynthesis is safari-only, wkwebview doesn't get it, app uses @capacitor-community/text-to-speech there instead
 function speak(text) {
   if (!navVoiceOn) return;
   if (isNativeApp()) {
@@ -271,8 +263,7 @@ function speakTurn(step, distRemaining) {
   haptic('LIGHT');
 }
 
-// builds the per-step distance-along-route markers once, reusing the same scored samples
-// nav part 1 already fetches - so advancing steps is just comparing numbers, no new geometry
+// builds the per-step markers once from the already-scored samples, advancing is just comparing numbers
 function setupNavSteps() {
   navStepIndex = 0;
   navArrived = false;
@@ -280,7 +271,7 @@ function setupNavSteps() {
   navSpokenNear = false;
   navLastHeatKind = null;
   navOffRouteStreak = 0;
-  navSimDist = 0; // reroutes call this too, progress-along-route restarts on the new route
+  navSimDist = 0;
   navLastRedrawMs = 0; // redraw right away on the next fix instead of waiting out the throttle
   const leg = routes[selectedRouteIndex].legs && routes[selectedRouteIndex].legs[0];
   navSteps = (leg && leg.steps) || [];
@@ -305,9 +296,7 @@ function advanceNavStep(userDist) {
   }
 }
 
-// looks at the next couple minutes of samples and says if its mostly shaded or mostly sunny.
-// reports the lookahead window itself rather than trying to find exactly where it changes -
-// that was giving "about 0 min" whenever a single sample near the start broke the streak
+// looks at the next couple minutes of samples, reports mostly-shaded or mostly-sunny for that window
 function heatHintFor(route, samples, userDist) {
   const hour = new Date().getHours();
   if (hour < SUN_UP_HOUR || hour > SUN_DOWN_HOUR) return null;
@@ -344,8 +333,7 @@ function heatHintFor(route, samples, userDist) {
   return null; // mixed, dont clutter the card
 }
 
-// NAV_STEP_ADVANCE_M and the "near" speech distance are both about 15m, so this has to run
-// and speak before advanceNavStep moves on, or the near announcement never gets a chance
+// NAV_STEP_ADVANCE_M and the near speech distance are both ~15m, this has to speak before advanceNavStep moves on
 function checkTurnSpeech(userDist) {
   const upcoming = navSteps[navStepIndex + 1];
   if (!upcoming) return;
@@ -444,8 +432,7 @@ function showRerouting() {
   document.getElementById('nav-instruction').hidden = false;
 }
 
-// same scoring rules as a fresh search (fetchRouteRawData/computeRouteScore/maxAllowedDurationMs/
-// MIN_COVERAGE all come from score.js), just without touching the route cards ui nav hides
+// same scoring rules as a fresh search (score.js), just skips the route cards ui nav hides
 async function applyReroute(newRoutes) {
   const raws = await Promise.all(newRoutes.map(route => fetchRouteRawData(route)));
   const departureMs = Date.now();
@@ -494,8 +481,7 @@ async function tryReroute(lat, lng) {
       fields: ['path', 'distanceMeters', 'durationMillis', 'viewport', 'routeLabels', 'legs']
     });
     if (!result.routes.length) throw new Error('no routes back');
-    // no shady detour search here on purpose - thats a separate computeRoutes call per
-    // candidate and we're already spending quota just getting the user back on track
+    // no shady detour search here, that's its own computeRoutes call and reroutes already spend quota
     await applyReroute(result.routes);
   } catch (err) {
     console.error("reroute didn't go through", err);
@@ -543,7 +529,7 @@ function toggleStepsList() {
 function redrawNavRoute(samples, idx) {
   const walkedPath = samples.slice(0, idx + 1).map(s => ({ lat: s.lat, lng: s.lng }));
   if (navWalkedLine) {
-    navWalkedLine.setPath(walkedPath); // reuse it, no reason to tear down and rebuild every fix
+    navWalkedLine.setPath(walkedPath);
   } else {
     navWalkedLine = new google.maps.Polyline({
       path: walkedPath,
@@ -566,8 +552,7 @@ function updateNavProgress(route, samples, idx) {
   document.getElementById('nav-progress').textContent =
     `${formatDuration(timeRemainingMs)} · ${formatDistance(distRemaining)} · arrive ${formatClockTime(arrival)}`;
 
-  // the heat segments were getting rebuilt from scratch on literally every gps fix, way more
-  // often than the colors actually change - throttling this is what fixed the lag on my phone
+  // redraw throttled so heat segments don't rebuild on literally every gps fix
   const now = Date.now();
   if (now - navLastRedrawMs < NAV_REDRAW_MIN_MS) return;
   navLastRedrawMs = now;
@@ -580,7 +565,7 @@ function showNavLocationError(msg) {
 }
 
 function handleNavFix(lat, lng, heading, speed, accuracyM) {
-  document.getElementById('nav-location-error').hidden = true; // got a fix, any earlier error is stale now
+  document.getElementById('nav-location-error').hidden = true;
 
   const effectiveHeading = headingFor(lat, lng, heading, speed);
   navLastFix = { lat, lng };
@@ -631,7 +616,7 @@ function startRealWatch() {
 
 function samplePointAtDist(samples, dist) {
   const total = samples[samples.length - 1].dist;
-  if (dist >= total) return null; // reached the end, sim just stops there
+  if (dist >= total) return null;
   for (let i = 1; i < samples.length; i++) {
     if (samples[i].dist >= dist) {
       const a = samples[i - 1], b = samples[i];
@@ -642,8 +627,7 @@ function samplePointAtDist(samples, dist) {
   return samples[samples.length - 1];
 }
 
-// ?simoff=1 dev tool: steps off to the side of the route for a bit so rerouting is easy to
-// watch. offsetPoint is the same great circle offset detours.js already uses for candidates
+// ?simoff=1 dev tool, steps off the route so rerouting is easy to watch (reuses detours.js's offsetPoint)
 function simDriftPoint(samples, dist) {
   const base = samplePointAtDist(samples, dist) || samples[samples.length - 1];
   const ahead = samplePointAtDist(samples, dist + 10) || base;
@@ -651,13 +635,12 @@ function simDriftPoint(samples, dist) {
   return offsetPoint(base.lat, base.lng, bearing + 90, NAV_SIM_DRIFT_OFFSET_M);
 }
 
-// dev tool only (?simnav=1) - fakes movement along the route on a timer so this can be
-// tested from a laptop. real navigation never uses a timer, watchPosition drives it instead
+// ?simnav=1 dev tool, fakes movement on a timer so this can be tested from a laptop, real nav uses watchPosition
 function startSimNav() {
   const speed = SIM_SPEEDS_MPS[travelMode] || SIM_SPEEDS_MPS.WALKING;
   navSimTimer = setInterval(() => {
     navSimDist += speed * (SIM_STEP_MS / 1000);
-    const samples = routeScores[selectedRouteIndex].samples; // read fresh, picks up reroutes too
+    const samples = routeScores[selectedRouteIndex].samples;
 
     if (simOffOn() && !navSimDriftDone && navSimDriftUntilMs === null) {
       const totalDist = samples[samples.length - 1].dist;
@@ -681,8 +664,7 @@ function startSimNav() {
   }, SIM_STEP_MS);
 }
 
-// @capacitor-community/keep-awake inside the app, the browser's own Screen Wake Lock api
-// otherwise - the wake lock api doesn't work reliably in a wkwebview, this plugin does
+// keep-awake plugin inside the app, browser's own wake lock api otherwise (unreliable in a wkwebview)
 async function acquireWakeLock() {
   if (isNativeApp()) {
     try {
@@ -696,7 +678,7 @@ async function acquireWakeLock() {
   try {
     navWakeLock = await navigator.wakeLock.request('screen');
   } catch (err) {
-    navWakeLock = null; // not supported, or denied - navigating still works fine without it
+    navWakeLock = null; // not supported or denied, navigating still works fine without it
   }
 }
 
@@ -725,9 +707,8 @@ function recenterNav() {
 }
 
 async function startNav() {
-  if (!routes.length || navActive) return; // double tap on Start was adding a second dragstart listener
-  // ios safari only allows speech started directly from a tap, so this is said right here
-  // to "unlock" it, otherwise later announcements (turns, rerouting) would just stay silent
+  if (!routes.length || navActive) return; // a second tap here would double up the dragstart listener
+  // ios safari only allows speech from a direct tap, this "unlocks" it or later announcements stay silent
   speak('Starting route');
 
   setLeaveTime(null); // leaving now, so the route scoring and arrival math line up w/ reality
@@ -736,7 +717,7 @@ async function startNav() {
   document.getElementById('search-container').hidden = true;
   document.getElementById('route-cards-panel').hidden = true;
   document.getElementById('nav-bar').hidden = false;
-  document.getElementById('top-bar').classList.add('nav-compact'); // frees up room for the instruction card
+  document.getElementById('top-bar').classList.add('nav-compact');
 
   navActive = true;
   navFollowing = true;
@@ -749,8 +730,7 @@ async function startNav() {
   navSimDriftDone = false;
 
   map.setZoom(NAV_ZOOM[travelMode] || NAV_ZOOM.WALKING);
-  // map stays north up for now - rotating it to match heading needs a vector map id,
-  // and this app uses the classic styled raster map for the custom desert colors
+  // map stays north up, rotating to match heading needs a vector map id (this uses the classic raster map for the desert colors)
   navDragListener = map.addListener('dragstart', onNavDragStart);
 
   await acquireWakeLock();
@@ -808,9 +788,8 @@ document.getElementById('nav-steps-list-close').addEventListener('click', e => {
   toggleStepsList();
 });
 
-// visibilitychange isn't reliable once ios actually suspends the app - @capacitor/app's
-// resume event is the real signal instead. true background tracking would need the
-// background location permission, skipping that on purpose, this just catches up once it's back up front
+// visibilitychange isn't reliable once ios suspends the app, @capacitor/app's resume event is the real signal
+// true background tracking would need location permission, skipped on purpose, this just catches up after
 function initAppResume() {
   if (!isNativeApp()) return;
   Capacitor.Plugins.App.addListener('resume', async () => {
