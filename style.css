@@ -167,17 +167,20 @@ body {
 }
 
 #heat-toggle {
-  padding: 10px 14px;
-  border: none;
-  border-radius: 6px;
+  padding: 16px 22px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
   background: var(--bg);
-  color: var(--text);
-  font-size: 0.9rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  color: var(--accent-text);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 #heat-toggle.active {
   background: var(--accent);
+  border-color: var(--accent);
   color: #fdf6ee;
 }
 
