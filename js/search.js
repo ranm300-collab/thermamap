@@ -206,7 +206,7 @@ function wireAutocomplete(el, onPick) {
       await place.fetchFields({ fields: ['displayName', 'location'] });
       onPick(place);
     } catch (err) {
-      console.error('place fetch failed', err);
+      console.error("couldn't fetch the place", err);
     }
   });
 }

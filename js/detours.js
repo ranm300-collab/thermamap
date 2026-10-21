@@ -186,7 +186,7 @@ async function requestAndScoreDetour(candidate) {
     const raw = await fetchRouteRawData(route);
     return { route, raw, score: computeRouteScore(route, raw, currentDepartureMs()) };
   } catch (err) {
-    console.error('detour route request failed', err);
+    console.error("couldn't get a detour route", err);
     return null;
   }
 }

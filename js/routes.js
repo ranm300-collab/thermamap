@@ -490,7 +490,7 @@ async function loadRoutes() {
     setSearchExpanded(false);
   } catch (err) {
     if (requestId !== routeRequestId) return;
-    console.error('routes request failed', err);
+    console.error('route request blew up', err);
     document.getElementById('route-cards-panel').hidden = true;
     setRouteError("Couldn't get routes, try again");
   }
