@@ -1,4 +1,4 @@
-const WX_COORDS = { lat: 35.0844, lng: -106.6504 };
+const WX_COORDS = {lat: 35.0844, lng: -106.6504};
 
 function updateFreshnessText() {
   const el = document.getElementById('wx-time');
@@ -22,7 +22,7 @@ async function loadFromNWS() {
     state.weather.readingTime = new Date(data.properties.timestamp);
     updateFreshnessText();
   } catch (err) {
-    console.error('nws fallback failed', err);
+    console.error("nws fallback didn't work", err);
   }
 }
 
@@ -157,7 +157,7 @@ async function loadAlerts() {
     lastAlertData = pickWorstAlert(data.features);
     updateBanner();
   } catch (err) {
-    console.error('alerts fetch failed', err);
+    console.error("couldn't fetch alerts", err);
   }
 }
 

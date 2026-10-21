@@ -1,7 +1,7 @@
 // follow-mode navigation after tapping Start on a route card, plus turn by turn
 // instructions along the way
 
-const NAV_ZOOM = { WALKING: 18, BICYCLING: 17 };
+const NAV_ZOOM = {WALKING: 18, BICYCLING: 17};
 const NAV_MIN_MOVING_MPS = 0.3; // gps reports tiny nonzero speeds sometimes even standing still
 const NAV_WALKED_COLOR = '#c9bfa8'; // close to the road color, reads as "already done"
 
@@ -30,7 +30,7 @@ const NAV_SPEECH_FAR_M = { WALKING: 91, BICYCLING: 183 };
 const NAV_SPEECH_NEAR_M = { WALKING: 15, BICYCLING: 30 };
 
 // dev only, lets me test the whole flow from a laptop w/o real gps. ~5x real speed
-const SIM_SPEEDS_MPS = { WALKING: 7, BICYCLING: 22.5 };
+const SIM_SPEEDS_MPS = {WALKING: 7, BICYCLING: 22.5};
 const SIM_STEP_MS = 500;
 const NAV_SIM_DRIFT_AT_FRAC = 0.3; // drift off route around here so rerouting is easy to watch
 const NAV_SIM_DRIFT_MS = 15000;
@@ -498,7 +498,7 @@ async function tryReroute(lat, lng) {
     // candidate and we're already spending quota just getting the user back on track
     await applyReroute(result.routes);
   } catch (err) {
-    console.error('reroute failed', err);
+    console.error("reroute didn't go through", err);
     document.getElementById('nav-reroute-status').textContent = "Couldn't reroute, keep going or end";
     document.getElementById('nav-reroute-status').hidden = false;
   }
