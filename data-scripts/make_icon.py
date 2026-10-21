@@ -39,8 +39,7 @@ def draw_mark(draw, cx, cy_sun, cy_path, scale):
     span = 360 * scale
     amp = 55 * scale
     w = PATH_WIDTH * scale
-    # stamping circles along the curve instead of a polyline, line(joint='curve') was
-    # leaving thin gaps at the sharper bends
+    # stamping circles along the curve, a joint='curve' polyline leaves gaps at sharp bends
     steps = 200
     for i in range(steps + 1):
         t = i / steps
@@ -64,8 +63,7 @@ def make_splash():
     draw_mark(draw, SPLASH_SIZE / 2, SPLASH_SIZE * 0.44, SPLASH_SIZE * 0.58, scale=scale)
     img.save(OUT_SPLASH)
     print(f'wrote {OUT_SPLASH}')
-    # app has one palette, no dark theme - without this capacitor-assets makes its own dark
-    # splash (shrinks the sandy square onto a plain black bg), looked broken on a real phone
+    # only one palette, no dark theme, this keeps capacitor-assets from faking its own dark splash
     img.save(OUT_SPLASH_DARK)
     print(f'wrote {OUT_SPLASH_DARK}')
 

@@ -24,11 +24,9 @@ TALL_OBSTACLE_M = 3  # same cutoff process_canopy uses for "thats a real tree/bu
 DEVELOPED_RADIUS_PX = 5  # ~150m at our 30m grid
 DEVELOPED_DENSITY = 0.12  # at least this much of the area nearby has to be tall, not just one tree
 
-# the wide bbox pulls in a lot of open desert/mesa, which runs hotter than most of the
-# actual city and was dragging the "typical abq" baseline up, making the whole city look
-# cool by comparison. baseline now comes from developed pixels only (near a building/tree).
-# desert far from any development is still scored against that baseline, so it correctly
-# shows up hot - we're just not letting it set the baseline itself anymore
+# the wide bbox pulls in a lot of open desert/mesa, which runs hotter than the actual city
+# baseline comes from developed pixels only (near a building/tree). desert still scores
+# against that baseline so it correctly shows up hot, it just doesn't set the baseline itself
 
 # fill(bit0) + dilated cloud(bit1) + cloud(bit3) + cloud shadow(bit4), from usgs qa_pixel docs
 BAD_QA_BITS = 0b11011
@@ -169,8 +167,7 @@ def fill_small_gaps(arr, radius, passes):
     return filled
 
 def local_tall_fraction(mask, radius):
-    # % of cells within radius pixels that are tall. a single tree 150m away used to be
-    # enough to count a desert pixel as "developed" - needed actual density, not just presence
+    # % of cells within radius pixels that are tall, needs real density nearby, not just one tree
     padded = np.pad(mask.astype('float32'), radius, mode='constant', constant_values=0)
     total = np.zeros(mask.shape, dtype='float32')
     n = 0
