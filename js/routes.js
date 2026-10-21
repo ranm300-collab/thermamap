@@ -1,6 +1,6 @@
 const ROUTE_COLOR = '#2f6fb0';
 const ROUTE_OUTLINE = '#fdf6ee';
-// alts were basically invisible, that gray was too close to the road color
+// a lighter gray blends into the road, this needs to read as a separate route
 const ALT_ROUTE_COLOR = '#736b5c';
 
 let travelMode = 'WALKING';
@@ -111,15 +111,15 @@ const ROUTE_LABELS = ['Route A', 'Route B', 'Route C', 'Route D'];
 const MOBILE_SHEET_PX = 700; // keep in sync w/ the media query in style.css
 
 // bottom sheet: 3 stops, transform based so dragging it doesn't thrash layout
-const SHEET_COLLAPSED_PEEK = 64; // the peek bar, keep in sync w/ the translateY in style.css
-const SHEET_HALF_PEEK = 360; // about 3 cards
-const SHEET_TAP_MAX_MOVE = 6; // px of movement below which a press counts as a tap, not a drag
+const SHEET_COLLAPSED_PEEK = 64; // keep in sync w/ the translateY in style.css
+const SHEET_HALF_PEEK = 360;
+const SHEET_TAP_MAX_MOVE = 6;
 let sheetState = 'collapsed'; // collapsed | half | full
 
 const LONG_WALK_MIN = 45;
 const LONG_WALK_HOT_F = 90;
 
-// nudge, not a nag - only for a genuinely long walk when its also actually hot out
+// nudge, not a nag, only for a genuinely long walk when its also actually hot out
 function longHotWalkNote(route) {
   if (travelMode !== 'WALKING' || route.durationMillis / 60000 < LONG_WALK_MIN) return null;
   const feels = state.weather.feelsLike;
@@ -508,7 +508,7 @@ document.getElementById('mode-walk').addEventListener('click', () => setMode('WA
 document.getElementById('mode-bike').addEventListener('click', () => setMode('BICYCLING'));
 
 // keeps "arrive 4:37 pm" honest as the clock moves, only matters when following "now".
-// just the time text, not a full renderRouteCards() - no reason to rebuild every card's dom for this
+// just the time text, not a full renderRouteCards(), no reason to rebuild every card's dom for this
 function refreshArrivalTimesIfNow() {
   if (state.leaveTimeMs !== null || !routes.length) return;
   const mains = document.querySelectorAll('.route-card-main');

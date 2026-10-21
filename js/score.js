@@ -1,19 +1,18 @@
 // scores each route for sun exposure using the grid data, picks the coolest one by default
 
 const SAMPLE_SPACING_M = 10;
-const SUN_UP_HOUR = 7; // sun's basically not up before this, call it shaded
-const SUN_DOWN_HOUR = 19; // our hourly shade data stops at 19:00
-const MAX_DETOUR_RATIO = 1.5; // won't win coolest if its way slower than the fastest route
-const MAX_DETOUR_EXTRA_MS = 20 * 60000; // ...or if its just flat out more than 20 min extra, whichever is smaller
-const MIN_COVERAGE = 0.5; // need data for at least half the route to trust the score
-const HEAT_FACTOR_DIVISOR = 30; // hotter than avg ground counts extra, tune later once i've walked some routes
+const SUN_UP_HOUR = 7;
+const SUN_DOWN_HOUR = 19;
+const MAX_DETOUR_RATIO = 1.5; // won't win coolest if way slower than the fastest route
+const MAX_DETOUR_EXTRA_MS = 20 * 60000; // or more than 20 min extra, whichever cap is smaller
+const MIN_COVERAGE = 0.5;
+const HEAT_FACTOR_DIVISOR = 30;
 // TODO: shade data is baked for a july 15 sun angle, prob off by winter
 
-// first pass, these are guesses til i've actually walked some hot days
-const IN_SHADE_FRAC = 0.5 // over half shaded at a sample counts as "in shade"
-const HOT_ANOM_F = 0 // any sunny sample on hotter than avg ground bumps up from warm
+const IN_SHADE_FRAC = 0.5
+const HOT_ANOM_F = 0
 const VERY_HOT_ANOM_F = 8
-const MIN_RUN_METERS = 40 // runs shorter than this fold into the last one so the line doesn't flicker
+const MIN_RUN_METERS = 40
 
 const HEAT_LEVEL_COLORS = {
   cool: '#2f6fb0',
@@ -24,8 +23,8 @@ const HEAT_LEVEL_COLORS = {
 
 const BETTER_TIME_STEP_MIN = 30;
 const BETTER_TIME_WINDOW_HOURS = 4;
-const BETTER_TIME_SUN_CUT_FRAC = 0.3; // needs to cut sun by at least this fraction...
-const BETTER_TIME_MIN_SUN_CUT = 3; // ...and at least this many minutes, so tiny routes don't trigger on noise
+const BETTER_TIME_SUN_CUT_FRAC = 0.3;
+const BETTER_TIME_MIN_SUN_CUT = 3;
 
 let routeScores = [];
 let routeRawData = []; // {samples, cells} per route, fetched once and reused when leave time changes
@@ -239,8 +238,7 @@ function pickCoolestRoute() {
   }
 }
 
-// 1.5x alone was way too loose on long trips, a 4hr walk could pick a route 2hrs longer.
-// capped at whichever is smaller so short trips still get some slack
+// capped at whichever is smaller (1.5x or +20min) so a long trip can't pick a route hours longer
 function maxAllowedDurationMs(fastestMs) {
   return Math.min(fastestMs * MAX_DETOUR_RATIO, fastestMs + MAX_DETOUR_EXTRA_MS);
 }
@@ -389,7 +387,7 @@ async function scoreAllRoutes() {
 }
 
 // keeps the "now" numbers honest as the clock moves, only matters when not following a picked time.
-// skips during nav too - nav.js has its own progress math and this would fight its route coloring
+// skips during nav too, nav.js has its own progress math and this would fight its route coloring
 function rescoreIfFollowingNow() {
   if (state.leaveTimeMs !== null || scoring || navActive) return;
   rescoreAllFromCache();

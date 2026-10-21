@@ -1,18 +1,18 @@
 // looks for a shadier street near the fastest route that google's own alternatives missed.
 // only runs on a new search, leave time changes just rescore whatever detour we already found
 
-// First pass - all guesses til i've actually walked a few
-const DETOUR_FRACTIONS = [1 / 3, 1 / 2, 2 / 3]; // where along the fastest route to look
-const DETOUR_OFFSETS_M = [150, 300, 500]; // how far off to the side to check
-const DETOUR_SAMPLE_RADIUS_M = 50; // average shade/canopy over roughly this big a patch
-const DETOUR_KEEP_COUNT = 3; // best candidates worth actually routing through
-const DETOUR_MIN_SEPARATION_M = 300; // candidates closer than this to a kept one get skipped
+// First pass, all guesses til i've actually walked a few
+const DETOUR_FRACTIONS = [1 / 3, 1 / 2, 2 / 3];
+const DETOUR_OFFSETS_M = [150, 300, 500];
+const DETOUR_SAMPLE_RADIUS_M = 50;
+const DETOUR_KEEP_COUNT = 3;
+const DETOUR_MIN_SEPARATION_M = 300;
 const DETOUR_MAX_REQUESTS = 3; // route requests burn quota, hard cap per search
-const DETOUR_MIN_SCORE_IMPROVEMENT = 0.15; // needs to beat the best route's score by this much
-const DETOUR_MAX_OVERLAP_FRAC = 0.8; // this much overlap with an existing route = not a real option
+const DETOUR_MIN_SCORE_IMPROVEMENT = 0.15;
+const DETOUR_MAX_OVERLAP_FRAC = 0.8;
 
 const OVERLAP_SAMPLE_STRIDE = 5;
-const OVERLAP_DIST_M = 25; // within this = "same street" for overlap purposes
+const OVERLAP_DIST_M = 25;
 
 let detourDebugMarkers = [];
 
@@ -252,7 +252,7 @@ async function findShadyDetour() {
   try {
     cellsFlat = await getGridCells(allPoints);
   } catch (err) {
-    console.error('detour grid lookup failed', err); // status was stuck on "looking for shadier streets" forever without this
+    console.error('detour grid lookup failed', err); // without this the status never clears on an error
     hideDetourStatus();
     return;
   }
