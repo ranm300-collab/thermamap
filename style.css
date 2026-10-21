@@ -1,10 +1,8 @@
 :root {
   --bg: #f4ede0;
   --text: #2b2620;
-  --accent: #b55538; /* nudged a touch darker so button text clears AA contrast */
-  /* same hue, darker - the bright accent doesn't hit AA contrast as small text */
-  --accent-text: #8f4330;
-  /* was two shades (7a7264/a39c8c), the lighter one never hit AA so just one muted tone now */
+  --accent: #b55538; /* nudged darker so button text clears AA contrast */
+  --accent-text: #8f4330; /* same hue, darker still, for small text */
   --muted: #5f594e;
 }
 
@@ -12,8 +10,7 @@
   box-sizing: border-box;
 }
 
-/* some elements set their own display: flex etc, which otherwise beats the
-   browser's default [hidden] rule and leaves them showing anyway */
+/* some elements set their own display: flex etc, which beats the default [hidden] rule */
 [hidden] {
   display: none !important;
 }
@@ -62,8 +59,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  /* max() so there's still real breathing room under the status bar even if a device
-     reports a smaller inset than expected, found this overlapping on a real phone */
+  /* max() keeps real room under the status bar, some devices under-report the inset */
   padding-top: max(calc(env(safe-area-inset-top) + 10px), 54px);
   padding-bottom: 10px;
   padding-left: max(16px, env(safe-area-inset-left));
@@ -267,8 +263,7 @@ body {
   text-align: center;
 }
 
-/* one container pushed into map.controls - maps lays out multiple pushed elements in a
-   row, so the pill and the expanded card both live in here and overlap via position instead */
+/* one container pushed into map.controls, the pill and expanded card overlap via position */
 #search-container {
   position: relative;
 }
@@ -504,7 +499,7 @@ body {
   gap: 6px;
 }
 
-/* heat level dot, same 5 colors as the legend swatches - dot not a border, reads cleaner */
+/* heat level dot, same 5 colors as the legend swatches, dot not a border, reads cleaner */
 .route-card-swatch {
   flex: 0 0 auto;
   width: 10px;
@@ -650,7 +645,7 @@ body {
     touch-action: none;
   }
 
-  /* the collapsed state - a real tappable bar, not just a thin handle someone could miss */
+  /* collapsed state, a real tappable bar, not just a thin handle */
   #route-peek-bar {
     display: flex;
     flex-direction: column;
@@ -695,7 +690,7 @@ body {
     height: 14px;
   }
 
-  /* half/full - a plain title row instead of the peek bar, w/ a real collapse button */
+  /* half/full state, a plain title row w/ a real collapse button instead of the peek bar */
   #route-sheet-header {
     flex-direction: column;
     align-items: center;
@@ -747,8 +742,7 @@ body {
     display: flex;
   }
 
-  /* still in the layout (so the panel's own height, and the translateY math, stay correct)
-     just not visible or reachable while only the peek bar is showing */
+  /* kept in the layout so the panel height and translateY math stay right, just hidden */
   #route-cards-panel[data-sheet="collapsed"] #route-cards,
   #route-cards-panel[data-sheet="collapsed"] #route-color-key,
   #route-cards-panel[data-sheet="collapsed"] #leave-time-label {
@@ -857,7 +851,7 @@ body {
     padding: 6px 10px;
   }
 
-  /* labels were close to unreadable at 0.56rem - i bumped it up and widened the legend to fit */
+  /* bumped up from 0.56rem and widened the legend so labels stay readable */
   .heat-band, .heat-band-marker {
     font-size: 0.66rem;
   }
