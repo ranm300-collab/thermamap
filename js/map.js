@@ -1,4 +1,4 @@
-const ABQ_CENTER = { lat: 35.0844, lng: -106.6504 };
+const ABQ_CENTER = {lat: 35.0844, lng: -106.6504};
 
 // colors picked by eye, calmer then default
 // parks = shade

@@ -11,7 +11,7 @@ const TUNE_TRIPS = [
   { name: 'Downtown to Old Town', mode: 'WALKING', origin: { lat: 35.084, lng: -106.650 }, dest: { lat: 35.098, lng: -106.669 } },
   { name: 'UNM to Coronado Center', mode: 'BICYCLING', origin: { lat: 35.084, lng: -106.619 }, dest: { lat: 35.104, lng: -106.567 } },
   { name: 'Nob Hill to Downtown', mode: 'WALKING', origin: { lat: 35.081, lng: -106.605 }, dest: { lat: 35.084, lng: -106.650 } },
-  { name: 'Rio Grande Nature Center to Old Town', mode: 'BICYCLING', origin: { lat: 35.130, lng: -106.683 }, dest: { lat: 35.098, lng: -106.669 } }
+  { name: 'Rio Grande Nature Center to Old Town', mode: 'BICYCLING', origin: { lat: 35.130, lng: -106.683 }, dest: { lat: 35.098, lng: -106.669 } },
 ];
 
 const TUNE_HOURS = [9, 13, 17];
