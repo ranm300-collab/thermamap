@@ -1,4 +1,4 @@
-// reads the exported canopy/shade/heat grid from webdata/grid, chunk by chunk, cached
+// Reads the exported canopy/shade/heat grid from webdata/grid, chunk by chunk, cached
 // no ui code in here on purpose, this gets reused for tap popups and route scoring later
 
 let metaPromise = null

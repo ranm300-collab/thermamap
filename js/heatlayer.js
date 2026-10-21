@@ -1,7 +1,7 @@
 const HEAT_MIN_ZOOM = 12; // matches the map's own minZoom, nothing below this ever gets requested
 const HEAT_MAX_ZOOM = 15; // tiles stop here, past this we overzoom the z15 tile instead
 
-// same 5 bands as export_web.py, upper edge of bands 0-3
+// Same 5 bands as export_web.py, upper edge of bands 0-3
 const HEAT_BAND_THRESHOLDS = [-6, -2, 2, 6];
 const HEAT_BAND_NAMES = ['Much cooler', 'Cooler', 'Typical', 'Hotter', 'Much hotter'];
 

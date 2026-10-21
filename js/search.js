@@ -110,7 +110,7 @@ function fitBothPins() {
   map.fitBounds(bounds, 60);
 }
 
-// pill shows a short "X to Y" once both ends are picked, otherwise just the placeholder
+// Pill shows a short "X to Y" once both ends are picked, otherwise just the placeholder
 function updateSearchPillText() {
   document.getElementById('search-pill-text').textContent =
     (state.start && state.dest) ? `${state.start.name} to ${state.dest.name}` : 'Where to?';
