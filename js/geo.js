@@ -2,8 +2,7 @@
 
 const GEO_CODES = { PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 };
 
-// the native plugin's errors dont carry the browser's numeric .code, so guess from the
-// message instead - keeps the existing permission denied / unavailable text working either way
+// native plugin errors dont carry the browser's numeric .code, guess from the message instead
 function normalizeGeoError(err) {
   const msg = ((err && err.message) || '').toLowerCase();
   let code = GEO_CODES.POSITION_UNAVAILABLE;
@@ -23,8 +22,7 @@ async function getCurrentPosition(options) {
   return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
 }
 
-// returns {clear} either way - watchPosition's own id shape differs between the two apis
-// (plain number vs an async string), easier to just hide it behind one method
+// returns {clear} either way, the id shape differs between the two apis (plain number vs async string)
 function watchPosition(options, onSuccess, onError) {
   if (isNativeApp()) {
     let watchId = null;

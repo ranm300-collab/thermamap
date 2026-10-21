@@ -123,8 +123,7 @@ function setSearchExpanded(expanded) {
   if (!expanded) updateSearchPillText();
 }
 
-// everything that depends on having a start+dest pair - routes, scores, detours, the
-// legend tags, the bottom sheet. gets called whenever either end goes away, not just a full clear
+// everything that depends on having a start+dest pair, called whenever either end goes away
 function clearRouteDisplay() {
   routeRequestId++; // anything already in flight (scoring, detours) should ignore its own result now
   clearRoutePolylines();
@@ -144,7 +143,7 @@ function clearRouteDisplay() {
   updateHeatMarkers();
 }
 
-// full reset - both locations, their pins, and anything route related. back to a clean map
+// full reset, both locations and anything route related, back to a clean map
 function clearRoute() {
   state.start = null;
   state.dest = null;

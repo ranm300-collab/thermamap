@@ -38,7 +38,7 @@ function matchesPrediction(r) {
   return expectedDirectionForBand(r.predictedBand) === r.feltRelative;
 }
 
-// right now, not a planned departure time - this is a reading taken in the field
+// right now, not a planned departure time, this is a reading taken in the field
 async function predictAt(lat, lng) {
   const cell = await getGridCell(lat, lng);
   if (!cell || cell.anomaly === null || cell.canopy === null) {

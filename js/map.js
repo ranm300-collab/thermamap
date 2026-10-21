@@ -12,7 +12,7 @@ const MAP_STYLE = [
   { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#b8c9a0' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  // city name label was vanishing right at min zoom, force it on
+  // forces the locality label on, it disappears right at min zoom otherwise
   { featureType: 'administrative.locality', elementType: 'labels', stylers: [{ visibility: 'on' }] }
 ];
 

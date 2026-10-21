@@ -1,4 +1,4 @@
-// ?cleartest=1 dev check - plans one real route then clears it every way a user actually can,
+// ?cleartest=1 dev check, plans one real route then clears it every way a user actually can
 // logs what's left on screen after each so i can catch stale sheet/lines/cards without guessing
 
 function clearTestOn() {

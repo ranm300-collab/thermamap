@@ -262,7 +262,7 @@ async function openTapPopup(latLng) {
   try {
     cell = await getGridCell(latLng.lat(), latLng.lng());
   } catch (err) {
-    console.error('grid cell fetch failed', err); // popup was stuck on "checking..." forever without this
+    console.error('grid cell fetch failed', err);
   }
   if (requestId !== tapRequestId) return; // closed or tapped elsewhere while this was loading
 
