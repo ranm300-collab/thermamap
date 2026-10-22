@@ -282,6 +282,17 @@ body {
   display: none;
 }
 
+#heat-legend.compact #heat-legend-tip {
+  display: none;
+}
+
+#heat-legend-tip {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 #heat-legend-caption {
   margin-top: 6px;
   font-size: 0.7rem;
