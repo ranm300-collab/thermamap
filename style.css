@@ -189,10 +189,36 @@ body {
   width: 300px;
 }
 
+#heat-legend-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
 #heat-legend-title {
   font-size: 0.8rem;
   font-weight: 600;
+}
+
+#heat-legend-info-btn {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0;
+}
+
+#heat-legend-info {
   margin-bottom: 6px;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: center;
 }
 
 #heat-legend-bands {

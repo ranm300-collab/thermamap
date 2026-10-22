@@ -4,9 +4,11 @@ const HEAT_MAX_ZOOM = 15; // tiles stop here, past this we overzoom the z15 tile
 // Same 5 bands as export_web.py, upper edge of bands 0-3
 const HEAT_BAND_THRESHOLDS = [-6, -2, 2, 6];
 const HEAT_BAND_NAMES = ['Much cooler', 'Cooler', 'Typical', 'Hotter', 'Much hotter'];
+const HEAT_BAND_WORDS = ['much cooler', 'cooler', 'normal', 'hotter', 'much hotter'];
 
 let heatMapType = null;
 let heatOn = false;
+let taggedSpots = []; // {label, anomaly}, exact values behind the (i) button
 
 function heatTileUrl(coord, zoom) {
   let z = zoom, x = coord.x, y = coord.y;
@@ -50,15 +52,28 @@ function clearBandTags() {
   for (let i = 0; i < HEAT_BAND_NAMES.length; i++) {
     document.querySelector(`#heat-band-${i} .heat-band-markers`).textContent = '';
   }
+  taggedSpots = [];
+  document.getElementById('heat-legend-info-btn').hidden = true;
+  document.getElementById('heat-legend-info').hidden = true;
 }
 
-// little "Start -4°" label above whichever band row it falls into
+// little "You: cooler spot" label above whichever band row it falls into, exact degrees are behind the (i)
 function tagBand(i, label, anomaly) {
   const markers = document.querySelector(`#heat-band-${i} .heat-band-markers`);
   const el = document.createElement('span');
   el.className = 'heat-band-marker';
-  el.textContent = `${label} ${anomaly >= 0 ? '+' : ''}${Math.round(anomaly)}°`;
+  el.textContent = `${label}: ${HEAT_BAND_WORDS[i]} spot`;
   markers.appendChild(el);
+  taggedSpots.push({ label, anomaly });
+  document.getElementById('heat-legend-info-btn').hidden = false;
+}
+
+function toggleHeatInfo() {
+  const el = document.getElementById('heat-legend-info');
+  el.hidden = !el.hidden;
+  if (!el.hidden) {
+    el.textContent = taggedSpots.map(s => `${s.label} ${s.anomaly >= 0 ? '+' : ''}${Math.round(s.anomaly)}°F vs typical`).join(' · ');
+  }
 }
 
 async function positionMarker(label, nodataId, place) {
@@ -102,6 +117,7 @@ function initHeatLayer() {
   map.controls[google.maps.ControlPosition.TOP_RIGHT].push(toggle);
   map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(document.getElementById('heat-legend'));
   toggle.addEventListener('click', toggleHeat);
+  document.getElementById('heat-legend-info-btn').addEventListener('click', toggleHeatInfo);
   updateHeatMarkers();
   initTapPopup();
 }

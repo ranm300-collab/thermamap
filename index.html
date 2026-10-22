@@ -33,7 +33,11 @@
 
 <button id="heat-toggle" type="button">DISPLAY HEAT WAVES</button>
 <div id="heat-legend" hidden>
-  <div id="heat-legend-title">Summer ground heat</div>
+  <div id="heat-legend-title-row">
+    <div id="heat-legend-title">Summer ground heat</div>
+    <button type="button" id="heat-legend-info-btn" aria-label="Exact temperatures" hidden>ⓘ</button>
+  </div>
+  <div id="heat-legend-info" hidden></div>
   <div id="heat-legend-bands">
     <div class="heat-band" id="heat-band-0">
       <div class="heat-band-markers"></div>
