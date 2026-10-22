@@ -22,14 +22,33 @@ function heatTileUrl(coord, zoom) {
   return `webdata/heat/${z}/${x}/${y}.png`;
 }
 
+const HEAT_HINT_KEY = 'seenHeatHint';
+
+function heatHintSeen() {
+  try {
+    return localStorage.getItem(HEAT_HINT_KEY) === '1';
+  } catch (err) {
+    return false; // private browsing etc, just show the hint every time, no big deal
+  }
+}
+
+function dismissHeatHint() {
+  document.getElementById('heat-first-hint').hidden = true;
+  try {
+    localStorage.setItem(HEAT_HINT_KEY, '1');
+  } catch (err) { /* storage blocked, hint just comes back next visit, fine */ }
+}
+
 function toggleHeat() {
   heatOn = !heatOn;
   document.getElementById('heat-toggle').classList.toggle('active', heatOn);
   if (heatOn) {
     map.overlayMapTypes.push(heatMapType);
+    if (!heatHintSeen()) document.getElementById('heat-first-hint').hidden = false;
   } else {
     map.overlayMapTypes.clear();
     closeTapPopup();
+    document.getElementById('heat-first-hint').hidden = true;
   }
   updateHeatMarkers();
 }
@@ -118,6 +137,7 @@ function initHeatLayer() {
   map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(document.getElementById('heat-legend'));
   toggle.addEventListener('click', toggleHeat);
   document.getElementById('heat-legend-info-btn').addEventListener('click', toggleHeatInfo);
+  document.getElementById('heat-first-hint-dismiss').addEventListener('click', dismissHeatHint);
   updateHeatMarkers();
   initTapPopup();
 }

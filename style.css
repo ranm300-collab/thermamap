@@ -189,6 +189,25 @@ body {
   width: 300px;
 }
 
+#heat-first-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  color: var(--text);
+}
+
+#heat-first-hint-dismiss {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fdf6ee;
+  font-size: 0.7rem;
+}
+
 #heat-legend-title-row {
   display: flex;
   align-items: center;
